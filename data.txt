@@ -1,0 +1,11 @@
+// sample dictionary
+
+dict
+{
+   key 1
+
+    dict2
+    {
+        key2 2
+    }
+}

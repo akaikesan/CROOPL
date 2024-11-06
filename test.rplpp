@@ -1,0 +1,26 @@
+class Proc1
+
+   int data
+
+   method get(int i, int output)
+      data <=> i
+
+class Program
+    int data1 
+    int data2
+    int data3 
+    separate Proc1 p
+
+
+    private method main()
+        print ""
+        data1 ^= 1 + 2
+        new separate Proc1 p
+        call p::get(data1, data2)
+        
+
+    private method pr(int data, int output)
+         print data
+
+
+

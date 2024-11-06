@@ -1,0 +1,65 @@
+class Program
+    Producer p1
+    Producer p2
+    Buffer detachable b
+
+
+    method main()
+        new separate Producer p1
+        new separate Producer p2
+        new separate Buffer b 
+
+
+        call b::init()
+
+        call p1::init()
+        call p1::generate()
+
+        call p2::init()
+
+        // consume (detachable)
+        uncall p2::produce(b)
+
+        call p1::produce(b)
+
+
+
+class Producer 
+    int[] products 
+    int prodNum
+
+    
+    method init()
+        prodNum += 3
+        new int[prodNum] products
+
+
+    method generate()
+        local int x = 0
+          from x = 0 do skip loop
+            products[x] += x + 1
+            x += 1
+          until x = prodNum
+        delocal int x = prodNum
+
+
+    method produce(Buffer detachable buf)
+        // ここでputがdetachableだと、produceが終了し、bufが消える。
+        // attachedだと、putが終わるまでbufが残る。
+        call buf::put(products[0])
+
+
+
+class Buffer 
+    int[] buffer 
+    int length
+    
+
+    method init()
+        new int[2] buffer 
+
+    method put(int i)
+        require length < 2
+          buffer[length]  <=> i
+          length += 1
+        ensure length > 0

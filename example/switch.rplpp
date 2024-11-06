@@ -1,0 +1,16 @@
+class Program
+    int x
+    method main()
+        x ^= 7
+        print("順実行:") call test() print("\n")
+        print("逆実行:") uncall test() print("\n")
+
+    method test()
+        switch x
+            case 0 print("0") esac 0 break
+            case 1 print("a")
+            case 2 print("b")
+            case 3 print("c") esac 3:2:1 break
+            case 5 print("5") esac 5 break
+            default skip break
+        hctiws x

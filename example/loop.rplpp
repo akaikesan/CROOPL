@@ -1,0 +1,14 @@
+
+class Program
+    int x
+
+    method main()
+        call odoloop()
+        
+
+    method odoloop()
+        from x = 0 do skip
+        loop
+            x += 1
+            x += 2
+        until x > 10

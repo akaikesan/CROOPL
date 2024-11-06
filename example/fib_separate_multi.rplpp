@@ -1,0 +1,50 @@
+// computing n(th) Fibonacci pair
+class Fib
+    int[] xs
+    int value
+    
+    method init()
+        new int[2] xs
+  
+    method fib(int n)
+        if n = 0 then
+            xs[0] ^= 1
+            xs[1] ^= 1
+        else 
+            n -= 1
+            local Fib f = nil
+            new separate Fib f
+            call f::init()
+            call f::fib(n)
+            print n
+            delocal Fib f = nil
+            xs[0] += xs[1]
+            xs[0] <=> xs[1]
+        fi xs[0] = xs[1]
+
+      method get (int attached out) 
+        out ^= xs[1]
+
+     method pr (int r)
+        print r
+
+
+// 1 processに1lock持たせておく。
+// 1 processが２つ以上オブジェクトを持つ場合は？
+// 木でfib
+
+class Program
+    int result int n
+
+    method main()
+        n ^= 8
+        local Fib f = nil
+        new separate Fib f
+        call f::init()
+        call f::fib(n)
+        call f::get(result)
+        print result
+        uncall f::fib(n)
+        uncall f::init()
+        delete Fib f
+        delocal Fib f = nil

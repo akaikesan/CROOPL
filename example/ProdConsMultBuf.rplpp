@@ -1,0 +1,101 @@
+class Program
+    Producer p1
+    Consumer p2
+    Buffer detachable b1
+    Buffer detachable b2
+
+    method main()
+        new separate Producer p1
+        new separate Producer p2
+        new separate Consumer c1
+        new separate Consumer c2
+        new separate Buffer b1
+        new separate Buffer b2
+
+        call b1::init()
+        call b2::init()
+
+        // Produce|consume start 
+
+        call p1::generate()
+        call p2::generate()
+
+        call p1::produce(b1)
+        call p2::produce(b1)
+
+        call c1::consume(b1)
+        call c2::consume(b1)
+
+        // Produce|consume end 
+
+        // uncalling produce|consume start
+
+        uncall p1::produce(b1)
+        uncall p2::produce(b1)
+
+        uncall c1::consume(b1)
+        uncall c2::consume(b1)
+
+        uncall p1::generate()
+        uncall p2::generate()
+
+        // uncalling produce|consume end
+
+        delete separate Producer p1
+        delete separate Producer p2
+        delete separate Consumer c1
+        delete separate Consumer c2
+
+        uncall b1::init()
+        delete separate Buffer b1
+
+        uncall b2::init()
+        delete separate Buffer b2
+
+
+class Producer
+  int data
+
+  method generate()
+    data ^= 3
+
+  method produce(Buffer detachable buf)
+    call buf::put(data)
+
+
+
+class Consumer
+  int data
+
+  method consume(Buffer detachable buf)
+    call buf::get(data)
+
+
+
+class Buffer
+    int[] buffer
+    int length
+    int MAX
+
+    method init()
+        MAX += 3
+        new int[MAX] buffer
+
+    method put(int i)
+        require length < MAX
+          buffer[length]  <=> i
+          print "produce"
+          print buffer
+          print " "
+          length += 1
+        ensure length > 0
+
+    method get(int i)
+        require length > 0
+          length -= 1
+          buffer[length] <=> i
+          print "consume"
+          print buffer
+          print " "
+        ensure length < MAX
+

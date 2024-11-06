@@ -1,0 +1,34 @@
+
+class Program
+    Fib f
+    Fib g
+    int y
+    int x
+
+    method main()
+        x += 1
+        call loc()
+
+    method loc()
+        new Fib g
+        new Fib f
+        call g::init(f,x)
+
+class Fib
+    int[] xs
+    Fib g
+    Fib f
+    int y
+    
+    method init(Fib h, int j)
+        new Fib g
+        call g::minus(j)
+        call h::array()
+
+    method array()
+        new int[2] xs
+
+    
+    method minus(int j)
+       j -= 12
+

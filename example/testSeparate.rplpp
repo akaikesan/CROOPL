@@ -1,0 +1,31 @@
+class Program
+    Fib f
+    int x
+
+    method main()
+        new Fib f
+        call f::init()
+        x += 1
+        call f::initSeparate(x)
+
+
+class Fib
+    int[] xs
+    Fib g
+    Fib f
+    
+    method init()
+        new int[2] xs
+
+    method initSeparate(int x)
+        new separate Fib g
+        call g::init()
+        call g::minus(x)
+        print(x)
+        x -= 3
+
+    method minus(int x)
+        xs[1] -= 1
+        print(xs[1])
+        x += xs[1]
+        print(x)

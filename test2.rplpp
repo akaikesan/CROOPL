@@ -1,0 +1,64 @@
+
+class Program
+  int length
+  int l
+  TestClass tc
+  TestClass tc2
+
+  method main()
+      new TestClass tc2
+      call tc2::test7()
+
+
+class TestClass2
+  int test
+
+  method plus()
+    test += 1
+
+
+class TestClass 
+  int length
+  int l
+
+
+  method test(int b)
+    b -= 3
+
+  method decrement()
+    l += 1
+
+
+  method test2()
+    if length = 0 & 0 = 0 then 
+      l += 1
+    else
+      l -= 1
+    fi l = 1 
+
+
+  method test3()
+    from length = 0 
+    do 
+      length += 1
+      length += 1
+    loop l+=1
+    until length = 10
+
+
+  method test4(TestClass2 tc2)
+    call tc2::plus(length)
+
+
+  method test5(int a, int b)
+    a <=> b
+
+
+  method test6 (TestClass2 y)
+    local TestClass2 x = nil
+      new TestClass2 x
+      x <=> y
+    delocal TestClass2 x = nil
+
+  method test7 ()
+    call decrement() 

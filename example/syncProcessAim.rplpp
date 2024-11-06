@@ -1,0 +1,25 @@
+class Test 
+    int number 
+    
+    method plus()
+      number += 1
+
+    method get (int attached out) 
+      out ^= number
+      print out
+
+class Program
+    int result
+
+    method main()
+
+        local Test t = nil
+        new separate Test t
+        call f::plus()
+        call f::get(result)  //wait
+        print result 
+        uncall f::get(result)
+        uncall f::plus()
+        delete Test t
+        delocal Test t = nil
+
