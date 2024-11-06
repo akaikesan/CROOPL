@@ -1,6 +1,6 @@
 *.out
 .venv
-Croopl
+CrooplNew
 venv
 parsetab.py
 python311
