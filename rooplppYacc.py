@@ -161,7 +161,7 @@ def p_statements(p):
 def p_y(p):
     '''
     y : ID LBRA exp RBRA
-    | ID 
+    | ID
     '''
     if len(p) == 2:
         p[0] = p[1]
@@ -360,6 +360,7 @@ def yacc_test():
     parent_conn, child_conn = mp.Pipe()
 
     # request process to run main func
+    # initProcessのアドレスは
     q.put(["main", [], "call", -1, child_conn])
 
     print(parent_conn.recv())
