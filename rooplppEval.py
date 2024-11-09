@@ -44,216 +44,6 @@ def writeMu(Gamma, globalMu, var, val):
     globalMu[Gamma[var]] = Value(val, v.ref)
 
 
-
-
-def passArgs(globalStore, argsInfo, passedArgs,storePath, envObjName):
-
-    for i, a in enumerate(argsInfo):
-        separatedObjName = getValueByPath(globalStore, storePath, envObjName)
-        if a['name'] in globalStore[separatedObjName].keys():
-            raise Exception('arg name is already defined')
-
-        value = getValueByPath(globalStore, storePath, passedArgs[i])
-        updateGlobalStoreByPath(globalStore, separatedObjName, a['name'], value)
-
-
-
-def assignVarAndGetDictByAddress(dic, p, varName, value, sep="/"):
-    lis = p.split(sep)
-    def _(dic, lis, sep):
-        if len(lis) == 0:
-            return 
-        if len(lis) == 1:
-            if isinstance(varName, list):
-                index = int(varName[1][0])
-                dic[lis[0]][varName[0]][index] = value
-            else:
-                dic[lis[0]][varName] = value 
-        else:
-            _(dic.get(lis[0], {}), lis[1:], sep)
-    _(dic, lis, sep=sep)
-
-
-def waitUntilStackIsEmpty(globalStore,topLevelName):
-    global historyStack
-    parent_conn, child_conn = mp.Pipe()
-    globalStore[topLevelName]['#q'].put( [child_conn] )
-
-    historyNumber = parent_conn.recv()
-
-    while True:
-        if historyNumber == 0:
-            break
-
-
-
-
-def reflectArgsPassedSeparated(globalStore, callerObjName, objName, argsInfo, args, dictAddress):
-
-    q = globalStore['#Store']
-
-    parent_conn, child_conn = mp.Pipe()
-    q.put(['reflectArgsPassedSeparated', callerObjName, objName, argsInfo, args, dictAddress, child_conn])
-
-    parent_conn.recv()
-    # print('args reflected by path')
-
-
-
-
-
-def reflectArgsPassed(globalStore, envObjName, calledObjName, argsInfo, passedArgs):
-
-
-    q = globalStore['#Store']
-
-    parent_conn, child_conn = mp.Pipe()
-
-    q.put(['reflectArgsPassed', envObjName, calledObjName, argsInfo, passedArgs, child_conn])
-
-
-    parent_conn.recv()
-    # print('args reflected')
-
-
-
-
-
-def updateGlobalStoreByPath(globalStore, storePath, varName, value):
-    
-
-    q = globalStore['#Store']
-
-    parent_conn, child_conn = mp.Pipe()
-    q.put(['updatePath', storePath, varName, value, child_conn])
-
-    parent_conn.recv()
-    # print('store updated by path')
-
-
-
-
-
-def deleteVarGlobalStoreByPath(globalStore, storePath, varName):
-
-    q = globalStore['#Store']
-
-    parent_conn, child_conn = mp.Pipe()
-    q.put(['deletePath', storePath, varName, child_conn])
-
-    parent_conn.recv()
-    # print('store deleted by path')
-
-
-
-
-
-def deleteVarGlobalStore(globalStore, envObjName, id1):
-
-    q = globalStore['#Store']
-
-    parent_conn, child_conn = mp.Pipe()
-    q.put(['delete', envObjName, id1, child_conn])
-
-    parent_conn.recv()
-    # print('store deleted')
-
-
-
-
-
-def getValueByPath(dic, p, varName, sep="/"):
-    lis = p.split(sep)
-    def _(dic, lis, sep):
-        if len(lis) == 0:
-            return 
-        if len(lis) == 1:
-            if isinstance(varName, list):
-                index = int(varName[1][0])
-                return dic[lis[0]][varName[0]][index] 
-            else:
-                return dic[lis[0]][varName]
-        else:
-            return _(dic.get(lis[0], {}), lis[1:], sep)
-    return _(dic, lis, sep=sep)
-
-
-
-
-
-def getLocalStore(dic, p, sep="/"):
-    lis = p.split(sep)
-    def _(dic, lis, sep):
-        if len(lis) == 0:
-            return 
-        if len(lis) == 1:
-            return dic[lis[0]].copy()
-        else:
-            return _(dic.get(lis[0], {}), lis[1:], sep)
-    return _(dic, lis, sep=sep)
-
-
-
-
-
-def makeStore(globalStore, storePath, classMap, className):
-
-    st = {}
-
-    if isinstance(className, list):  # Array
-
-
-        index = evalExp(getLocalStore(globalStore, storePath), className[0][1])
-        assert isinstance(index, int)
-        
-        if className[0][0] == 'int':
-
-            st = [0] * int(index)
-        else:
-            st = [{}] * int(index)
-
-    else:
-        for f in classMap[className]['fields'].keys():
-
-            if classMap[className]['fields'][f] == 'int':
-                # 0 initialized
-                st[f] = 0
-            else:
-                # TODO: ex) AクラスのfieldをAクラス内で宣言したら、エラーを出す。
-                #          現在は無限再帰のpython側のエラーとなっている。
-                # st[f] = makeStore(classMap, classMap[className]['fields'][f])
-                st[f] = {}
-        st['type'] = className
-
-    return st
-
-
-
-
-
-def callOrUncall(invert, callUncall):
-    # callOrUncall is must be called when call separated object's method
-    if callUncall == 'call':
-        if invert:
-            return 'uncall'
-        else:
-            return 'call'
-    elif callUncall == 'uncall':
-        if invert:
-            return 'call'
-        else:
-            return 'uncall'
-    else:
-        raise Exception("callUncall must be call or uncall")
-
-
-
-    
-
-
-
-
-
 def setMuGamma(classMap, ProcType, Gamma, globalMu, q):
     fields = classMap[ProcType]['fields']
     for f in fields.keys():
@@ -270,6 +60,7 @@ def setMuGamma(classMap, ProcType, Gamma, globalMu, q):
     l = len(globalMu.keys()) + 1
     Gamma['this'] = l
     globalMu[l] = {'methodQ':q, 'type': ProcType}
+    time.sleep(0.1)
 
     return l
 
@@ -297,9 +88,6 @@ def makeSeparatedProcess(classMap,
                          q,
                          Gamma,
                          globalMu))
-
-
-
 
 
     p.start()
@@ -506,12 +294,6 @@ def evalStatement(classMap, statement,
                 print(statement[1][1:-1])
             return
 
-        '''
-        for k in globalStore.keys():
-            if k != '#Store':
-                print('$ ' + k + ' $')
-                print(globalStore[k])
-        '''
 
     elif (statement[0] == 'skip'):
         pass
@@ -526,14 +308,20 @@ def evalStatement(classMap, statement,
             # new object
             if (len(statement) == 4):
                 if (globalMu[Gamma[statement[2]]]['type'][0] != 'separate' or globalMu[Gamma[statement[2]]]['status'] != 'nil'):
-                    raise Exception('non-seprate-type object can\'t be separate-newed.')
+                    print('seprate-type object can\'t be non-separate-newed.')
+                    return 'error'
 
                 proc, objAddr = makeSeparatedProcess(classMap, statement[1], globalMu)
                 global ProcDict
                 ProcDict[objAddr] = proc
                 Gamma[statement[2]] = objAddr
+
+                print('ProcDict :', ProcDict)
             if (len(statement) == 3):
-                pass
+
+                if (globalMu[Gamma[statement[2]]]['type'][0] == 'separate' or globalMu[Gamma[statement[2]]]['status'] != 'nil'):
+                    print('Error : seprate-type object can\'t be non-separate-newed.')
+                    return 'error'
 
 
     elif (statement[0] == 'delete'):
@@ -594,6 +382,8 @@ def evalStatement(classMap, statement,
     elif (statement[0] == 'local'):
         pass
 
+    return 'success'
+
 
 
 
@@ -626,9 +416,6 @@ def interpreter(classMap,
             request = q.get()
             lenReq = len(request)
 
-            print(request)
-
-            print(ProcDict)
             if lenReq == 5:
 
                 methodName   = request[0]
@@ -638,7 +425,7 @@ def interpreter(classMap,
                 objAddr      = request[3] 
 
 
-                print(Gamma['this'])
+                print("mu : ", globalMu)
                 procObjtype = globalMu[Gamma['this']]['type']
                 statements = classMap[procObjtype]['methods'][methodName]['statements']
                 funcArgs = classMap[procObjtype]['methods'][methodName]['args']
@@ -665,18 +452,24 @@ def interpreter(classMap,
                     invert = not invert
                 
                 # Eval Statements
+                print(invert)
                 for s in statements:
-                    evalStatement(classMap,
+                    result = evalStatement(classMap,
                               s,
                               Gamma,
                               globalMu,
                               invert)
+                    if result == 'error':
+                        print('Error :',s, 'in', methodName)
+                        break
 
+                print('ProcDict :',ProcDict)
                 # decrement reference Counter
                 for argAddr in passedArgs:
                     refcountDown(globalMu, argAddr)
 
-                printMU(Gamma,globalMu)
+                printMU(Gamma, globalMu)
+
 
                 if callORuncall == 'call':
                     historyStack.put(request)
@@ -686,7 +479,11 @@ def interpreter(classMap,
                 
                 if (request[4] != None):
                     # attached
-                    request[4].send(methodName + ' method ended')
+                    print ('main ProcDict :',ProcDict)
+                    if (request[0] != 'main' ):
+                        request[4].send(methodName + ' method ended')
+                    elif (request[0] == 'main' and len(ProcDict) == 0):
+                        request[4].send(methodName + ' method ended')
 
 
 

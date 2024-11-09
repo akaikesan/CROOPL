@@ -10,6 +10,7 @@ class Program
     int data2
     int data3 
     separate Proc1 p
+    separate Proc1 p2
 
 
     private method main()

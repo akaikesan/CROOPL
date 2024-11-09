@@ -4,7 +4,6 @@ import time
 
 from rooplppLexer import tokens
 from rooplppEval import   makeSeparatedProcess
-from rooplppStoreLoop import makeSeparatedStore
 
 classMap = {}
 
@@ -213,6 +212,8 @@ def p_statement(p):
     | DELETE arrayType id
     | NEW SEPARATE ID y
     | DELETE SEPARATE ID y
+    | NEW ID y
+    | DELETE ID y
     | SKIP
     | PRINT exp
     | PRINT STR
@@ -341,7 +342,6 @@ def yacc_test():
     # generate Process
     m = mp.Manager()
     globalMu = m.dict()
-    ProcDict = m.dict()
 
     varType = 'Program'
     
@@ -365,22 +365,17 @@ def yacc_test():
     # initProcessのアドレスは
     q.put(["main", [], "call", -1, child_conn])
 
+    
+    '''
+    inp = input("Press Enter to continue...\n")
+    if inp == "exit":
+    '''
+
     print(parent_conn.recv())
 
+
     # storeProcess.terminate()
-    initProcess.terminate()
-
-'''
-    while(1):
-        time.sleep(sys.float_info.min)
-
-        print('-------------------------------')
-        for k in globalStore.keys():
-            if k != '#Store':
-                print('$ ' + k + ' $')
-                print(globalStore[k])
-        print('-------------------------------')
-'''
+    # initProcess.terminate()
 
 
 
