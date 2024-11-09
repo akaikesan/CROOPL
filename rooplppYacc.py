@@ -3,7 +3,7 @@ import sys
 import time
 
 from rooplppLexer import tokens
-from rooplppEval import   makeSeparatedProcess
+from rooplppEval import   makeSeparatedProcess, Value
 
 classMap = {}
 
@@ -342,7 +342,7 @@ def yacc_test():
     # generate Process
     m = mp.Manager()
     globalMu = m.dict()
-    globalMu[0] = {'status': 'nil', 'type' : ['separate','Program']}
+    globalMu[0] = Value({'status': 'nil', 'type' : ['separate','Program']},0)
 
     
     initProcess = makeSeparatedProcess(classMap, globalMu, 0)
@@ -350,7 +350,7 @@ def yacc_test():
     if initProcess == None:
         raise Exception("initProcess is None.")
 
-    q = globalMu[0]['methodQ']
+    q = globalMu[0].val['methodQ']
 
 
     parent_conn, child_conn = mp.Pipe()

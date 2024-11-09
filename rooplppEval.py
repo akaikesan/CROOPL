@@ -3,8 +3,6 @@ import time
 import sys
 import queue
 
-# Storeはfオブジェクトを使いたい場合、{, f:{}, ...} の形でevalStatementに渡す。
-
 class Value:
     val = 0
     ref = 0
@@ -26,7 +24,7 @@ def printMU(Gamma, MU):
         if type(v) == Value :
             print(k, ':', '(', v.val, ',', v.ref, ')')
         else:
-            print(k, ':', v)
+            print("Internal Error: value is not Value type")
 
 
 def refcountUp(globalMu, addr):
@@ -62,11 +60,9 @@ def setNewedObj(classMap, objType, Gamma, globalMu, q):
         elif fields[f][0] == 'list':
             pass
         else:
-            print(fields[f])
-            globalMu[l] = {'type':fields[f], 'status': 'nil'}
+            globalMu[l] = Value({'type':fields[f], 'status': 'nil'}, 1)
 
-    globalMu[Gamma['this']] = {'methodQ':q, 'type': objType, 'status': 'newed'}
-    #time.sleep(0.1)
+    globalMu[Gamma['this']] = Value({'methodQ':q, 'type': objType, 'status': 'newed'}, 1)
 
     return
 
@@ -77,12 +73,12 @@ def makeLocalObj(classMap,
                  addr
                  ):
     Gamma = {'this' : addr} 
-    objType = globalMu[addr]['type']
+    objType = globalMu[addr].val['type']
 
     setNewedObj(classMap, objType, Gamma, globalMu, None)
 
     obj = globalMu[addr] 
-    obj['gamma'] = Gamma
+    obj.val['gamma'] = Gamma
     globalMu[addr] = obj
 
 
@@ -91,7 +87,7 @@ def makeSeparatedProcess(classMap,
                          globalMu,
                          addr):
     Gamma = {'this' : addr} 
-    objType = globalMu[addr]['type']
+    objType = globalMu[addr].val['type']
 
     global m
     if addr == 0:
@@ -240,6 +236,8 @@ def evalStatement(classMap, statement,
     global ProcessRefCounter
     global ProcessObjName
 
+    
+
 
     if statement is None:
         pass
@@ -277,9 +275,9 @@ def evalStatement(classMap, statement,
             writeMu(Gamma, globalMu, statement[2], result)
 
     elif (statement[0] == 'print'):
-        if statement[1][0] == '"':
-            if statement[1] == '""':
-                print(statement[1][1:-1])
+        if statement[1][0] == '"' and statement[1][-1] == '"':
+            print(statement[1][1:-1])
+            printMU(Gamma, globalMu)
 
     elif (statement[0] == 'skip'):
         pass
@@ -293,7 +291,7 @@ def evalStatement(classMap, statement,
         else: 
             # new object
             if (len(statement) == 4):
-                if (globalMu[Gamma[statement[2]]]['type'][0] != 'separate' or globalMu[Gamma[statement[2]]]['status'] != 'nil'):
+                if (globalMu[Gamma[statement[2]]].val['type'][0] != 'separate' or globalMu[Gamma[statement[2]]].val['status'] != 'nil'):
                     print('seprate-type object can\'t be non-separate-newed.')
                     return 'error'
 
@@ -303,7 +301,7 @@ def evalStatement(classMap, statement,
 
             if (len(statement) == 3):
 
-                if (globalMu[Gamma[statement[2]]]['type'][0] == 'separate' or globalMu[Gamma[statement[2]]]['status'] != 'nil'):
+                if (globalMu[Gamma[statement[2]]].val['type'][0] == 'separate' or globalMu[Gamma[statement[2]]].val['status'] != 'nil'):
                     print('Error : seprate-type object can\'t be non-separate-newed.')
                     return 'error'
                 makeLocalObj(classMap, globalMu, Gamma[statement[2]])
@@ -335,13 +333,12 @@ def evalStatement(classMap, statement,
 
         if len(statement) == 4:  # call method of object
 
-            if ('gamma' in globalMu[Gamma[statement[1]]].keys() ):
+            if ('gamma' in globalMu[Gamma[statement[1]]].val.keys() ):
                 t          = getType(globalMu[Gamma[statement[1]]]['type'])
                 statements = classMap[t]['methods'][statement[2]]['statements']
                 funcArgs   = classMap[t]['methods'][statement[2]]['args']
                 passedArgs = statement[3]
                 localGamma = globalMu[Gamma[statement[1]]]['gamma']
-                print(passedArgs)
 
                 for i in range(len(funcArgs)):
                     localGamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
@@ -369,7 +366,7 @@ def evalStatement(classMap, statement,
                     refcountUp(globalMu, varAddr)
                     argsAddr.append(varAddr)
 
-                q = globalMu[targetObjAddr]['methodQ']
+                q = globalMu[targetObjAddr].val['methodQ']
                 time.sleep(sys.float_info.min)
                 q.put([methodName, argsAddr, callOrUncall, callerAddr, None])
 
@@ -384,9 +381,6 @@ def evalStatement(classMap, statement,
             statements = classMap[thisType]['methods'][statement[1]]['statements']
             for s in statements:
                 evalStatement(classMap, s, Gamma, globalMu, invert)
-
-            if (statement[0] == 'uncall'):
-                invert = not invert
 
 
         if (statement[0] == 'uncall'):
@@ -447,7 +441,7 @@ def interpreter(classMap,
                 # if objAddr is 0, this intrprtr is running main func
                 objAddr      = request[3] 
 
-                procObjtype = globalMu[Gamma['this']]['type']
+                procObjtype = globalMu[Gamma['this']].val['type']
                 statements = classMap[getType(procObjtype)]['methods'][methodName]['statements']
                 funcArgs = classMap[getType(procObjtype)]['methods'][methodName]['args']
 
@@ -474,13 +468,9 @@ def interpreter(classMap,
                 
                 # Eval Statements
                 for s in statements:
-                    result = evalStatement(classMap,
-                              s,
-                              Gamma,
-                              globalMu,
-                              invert)
+                    result = evalStatement(classMap, s, Gamma, globalMu, invert)
                     if result == 'error':
-                        print('Error :',s, 'in', methodName)
+                        print('Error :', s, 'in', methodName)
                         break
 
                 # decrement reference Counter
@@ -494,7 +484,7 @@ def interpreter(classMap,
                 elif callORuncall == 'uncall':
                     invert = not invert
                     historyStack.get()
-                printMU(Gamma, globalMu)
+
                 
                 if (request[4] != None):
                     # attached

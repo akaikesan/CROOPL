@@ -3,7 +3,19 @@ class Proc1
    int data
 
    method get(int i, int output)
+       i += output
+       print ""
+
+class Proc2
+
+   int data
+
+   method init()
+      data += 22
+
+   method get(Proc1 i, Proc1 output)
        output <=> i
+       print "hello"
 
 class Program
     int data1 
@@ -11,14 +23,16 @@ class Program
     int data3 
     separate Proc1 p
     Proc1 p2
+    Proc1 p3
 
 
     private method main()
         data1 ^=  1
         data2 ^=  2 
-        new  Proc1 p2
-        call  p2::get(data1, data2)
-        uncall p2::get(data1, data2)
+        new separate Proc1 p
+
+        call     p::get(data1, data2)
+        uncall   p::get(data1, data2)
         
 
     private method pr(int data, int output)
