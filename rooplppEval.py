@@ -66,7 +66,7 @@ def setNewedObj(classMap, objType, Gamma, globalMu, q):
             globalMu[l] = {'type':fields[f], 'status': 'nil'}
 
     globalMu[Gamma['this']] = {'methodQ':q, 'type': objType, 'status': 'newed'}
-    time.sleep(0.1)
+    #time.sleep(0.1)
 
     return
 
@@ -112,7 +112,7 @@ def makeSeparatedProcess(classMap,
 
 
     p.start()
-    time.sleep(0.1)
+    time.sleep(sys.float_info.min)
 
     return p
 
@@ -240,8 +240,6 @@ def evalStatement(classMap, statement,
     global ProcessRefCounter
     global ProcessObjName
 
-    print(statement)
-
 
     if statement is None:
         pass
@@ -332,14 +330,33 @@ def evalStatement(classMap, statement,
         # ['call', 'tc', 'test', [args]]
         # ['call', 'test', [args]]
 
+        if (statement[0] == 'uncall'):
+            invert = not invert
+
         if len(statement) == 4:  # call method of object
-            print('hei')
 
             if ('gamma' in globalMu[Gamma[statement[1]]].keys() ):
-                t = getType(globalMu[Gamma[statement[1]]]['type'])
-                statements = classMap[t]['methods'][statement[2]]
-                print(statements)
-                pass
+                t          = getType(globalMu[Gamma[statement[1]]]['type'])
+                statements = classMap[t]['methods'][statement[2]]['statements']
+                funcArgs   = classMap[t]['methods'][statement[2]]['args']
+                passedArgs = statement[3]
+                localGamma = globalMu[Gamma[statement[1]]]['gamma']
+                print(passedArgs)
+
+                for i in range(len(funcArgs)):
+                    localGamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
+
+                for s in statements:
+                    evalStatement(classMap, s, localGamma, globalMu,invert)
+
+                for i in range(len(funcArgs)):
+                    localGamma.pop(funcArgs[i]['name'])
+                obj = globalMu[Gamma[statement[1]]]
+                obj['gamma'] = localGamma
+                globalMu[Gamma[statement[1]]] = obj
+
+
+
             else:
                 callerAddr    = Gamma['this']
                 callOrUncall  = statement[0]
@@ -359,11 +376,21 @@ def evalStatement(classMap, statement,
 
         elif len(statement) == 3:  # call method of local object
 
+
+            if (statement[0] == 'uncall'):
+                invert = not invert
+
             thisType = globalMu[Gamma['this']]['type']
             statements = classMap[thisType]['methods'][statement[1]]['statements']
             for s in statements:
                 evalStatement(classMap, s, Gamma, globalMu, invert)
 
+            if (statement[0] == 'uncall'):
+                invert = not invert
+
+
+        if (statement[0] == 'uncall'):
+            invert = not invert
             
 
 
@@ -461,14 +488,13 @@ def interpreter(classMap,
                     Gamma.pop(funcArgs[i]['name'])
                     refcountDown(globalMu, passedArgs[i])
 
-                printMU(Gamma, globalMu)
-
 
                 if callORuncall == 'call':
                     historyStack.put(request)
                 elif callORuncall == 'uncall':
                     invert = not invert
                     historyStack.get()
+                printMU(Gamma, globalMu)
                 
                 if (request[4] != None):
                     # attached
