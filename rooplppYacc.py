@@ -342,21 +342,15 @@ def yacc_test():
     # generate Process
     m = mp.Manager()
     globalMu = m.dict()
+    globalMu[0] = {'status': 'nil', 'type' : ['separate','Program']}
 
-    varType = 'Program'
     
-    '''
-    storeProcess = makeSeparatedStore(globalGamma, m)
-    if storeProcess == None:
-        raise Exception("storeProcess is None.")
-    '''
-
-    initProcess, objAddr = makeSeparatedProcess(classMap, varType, globalMu)
+    initProcess = makeSeparatedProcess(classMap, globalMu, 0)
 
     if initProcess == None:
         raise Exception("initProcess is None.")
 
-    q = globalMu[objAddr]['methodQ']
+    q = globalMu[0]['methodQ']
 
 
     parent_conn, child_conn = mp.Pipe()

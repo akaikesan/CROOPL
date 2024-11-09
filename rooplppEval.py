@@ -44,10 +44,17 @@ def writeMu(Gamma, globalMu, var, val):
     globalMu[Gamma[var]] = Value(val, v.ref)
 
 
-def setMuGamma(classMap, ProcType, Gamma, globalMu, q):
-    fields = classMap[ProcType]['fields']
+def getType(t):
+    if t[0] == 'separate':
+        return t[1]
+    else:
+        return t[0]
+
+
+def setNewedObj(classMap, objType, Gamma, globalMu, q):
+    fields = classMap[getType(objType)]['fields']
     for f in fields.keys():
-        l = len(globalMu.keys()) + 1
+        l = len(globalMu.keys())
         Gamma[f] = l
         if fields[f][0] == 'int':
             v = Value(0,1)
@@ -55,36 +62,50 @@ def setMuGamma(classMap, ProcType, Gamma, globalMu, q):
         elif fields[f][0] == 'list':
             pass
         else:
+            print(fields[f])
             globalMu[l] = {'type':fields[f], 'status': 'nil'}
 
-    l = len(globalMu.keys()) + 1
-    Gamma['this'] = l
-    globalMu[l] = {'methodQ':q, 'type': ProcType}
+    globalMu[Gamma['this']] = {'methodQ':q, 'type': objType, 'status': 'newed'}
     time.sleep(0.1)
 
-    return l
+    return
 
+
+
+def makeLocalObj(classMap,
+                 globalMu,
+                 addr
+                 ):
+    Gamma = {'this' : addr} 
+    objType = globalMu[addr]['type']
+
+    setNewedObj(classMap, objType, Gamma, globalMu, None)
+
+    obj = globalMu[addr] 
+    obj['gamma'] = Gamma
+    globalMu[addr] = obj
 
 
  
 def makeSeparatedProcess(classMap,
-                         ObjType,
-                         globalMu):
-    global m
-    Gamma = {} 
+                         globalMu,
+                         addr):
+    Gamma = {'this' : addr} 
+    objType = globalMu[addr]['type']
 
-    if globalMu.keys() == []:
+    global m
+    if addr == 0:
         m = mp.Manager()
         q = m.Queue()
     else:
         q = m.Queue()
 
 
-    objAddr = setMuGamma(classMap, ObjType, Gamma, globalMu, q)
+    setNewedObj(classMap, objType, Gamma, globalMu, q)
    
     p = mp.Process(target = interpreter,
                    args=(classMap,
-                         ObjType,
+                         objType,
                          q,
                          Gamma,
                          globalMu))
@@ -93,7 +114,7 @@ def makeSeparatedProcess(classMap,
     p.start()
     time.sleep(0.1)
 
-    return p, objAddr 
+    return p
 
 
 
@@ -139,13 +160,6 @@ def updateGlobalStore(globalStore, objName, varName, value):
     parent_conn.recv()
     # print('store updated')
 
-
-
-
-
-def getType(classMap, thisType, varName):
-    return classMap[thisType]['fields'][varName]
-    
 
 
 
@@ -311,17 +325,20 @@ def evalStatement(classMap, statement,
                     print('seprate-type object can\'t be non-separate-newed.')
                     return 'error'
 
-                proc, objAddr = makeSeparatedProcess(classMap, statement[1], globalMu)
+                proc = makeSeparatedProcess(classMap, globalMu,  Gamma[statement[2]])
                 global ProcDict
-                ProcDict[objAddr] = proc
-                Gamma[statement[2]] = objAddr
+                ProcDict[Gamma[statement[2]]] = proc
 
-                print('ProcDict :', ProcDict)
             if (len(statement) == 3):
 
                 if (globalMu[Gamma[statement[2]]]['type'][0] == 'separate' or globalMu[Gamma[statement[2]]]['status'] != 'nil'):
                     print('Error : seprate-type object can\'t be non-separate-newed.')
                     return 'error'
+                objAddr = makeLocalObj(classMap, globalMu, Gamma[statement[2]])
+                Gamma[statement[2]] = objAddr
+                
+                
+
 
 
     elif (statement[0] == 'delete'):
@@ -424,11 +441,9 @@ def interpreter(classMap,
                 # if objAddr is 0, this intrprtr is running main func
                 objAddr      = request[3] 
 
-
-                print("mu : ", globalMu)
                 procObjtype = globalMu[Gamma['this']]['type']
-                statements = classMap[procObjtype]['methods'][methodName]['statements']
-                funcArgs = classMap[procObjtype]['methods'][methodName]['args']
+                statements = classMap[getType(procObjtype)]['methods'][methodName]['statements']
+                funcArgs = classMap[getType(procObjtype)]['methods'][methodName]['args']
 
                 # append args to Gamma
 
@@ -452,7 +467,6 @@ def interpreter(classMap,
                     invert = not invert
                 
                 # Eval Statements
-                print(invert)
                 for s in statements:
                     result = evalStatement(classMap,
                               s,
@@ -463,10 +477,10 @@ def interpreter(classMap,
                         print('Error :',s, 'in', methodName)
                         break
 
-                print('ProcDict :',ProcDict)
                 # decrement reference Counter
-                for argAddr in passedArgs:
-                    refcountDown(globalMu, argAddr)
+                for i in range(len(passedArgs)):
+                    Gamma.pop(funcArgs[i]['name'])
+                    refcountDown(globalMu, passedArgs[i])
 
                 printMU(Gamma, globalMu)
 
