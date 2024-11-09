@@ -120,16 +120,6 @@ def makeSeparatedProcess(classMap,
 
 
 
-def checkVarIsSeparated(globalStore, varName ):
-    for v in globalStore.keys():
-        if v == varName:
-            return True
-    return False
-
-
-
-
-
 def checkObjIsDeletable(varList, env):
     env['type'] = 0
     for k in varList :
@@ -141,26 +131,10 @@ def checkObjIsDeletable(varList, env):
 
 
 
-
 def checkListIsDeletable(list):
     for i in list:
         if i != 0:
             raise Exception("you can invert-new only 0-initialized array")
-
-
-# this is why Here use proxy ↓
-# https://stackoverflow.com/questions/26562287/value-update-in-manager-dict-not-reflected
-def updateGlobalStore(globalStore, objName, varName, value):
-
-    q = globalStore['#Store']
-
-    parent_conn, child_conn = mp.Pipe()
-    q.put(['update', objName, varName, value, child_conn])
-
-    parent_conn.recv()
-    # print('store updated')
-
-
 
 
 
@@ -266,10 +240,12 @@ def evalStatement(classMap, statement,
     global ProcessRefCounter
     global ProcessObjName
 
+    print(statement)
+
 
     if statement is None:
-        return
-    if (statement[0] == 'assignment'): 
+        pass
+    elif (statement[0] == 'assignment'): 
         # p[0] = ['assignment', p[2], p[1], p[3]]
         # ex) x += 2+1 -> ['assignment', +=, x, 2+1]
         if (statement[1] == '<=>'):
@@ -306,8 +282,6 @@ def evalStatement(classMap, statement,
         if statement[1][0] == '"':
             if statement[1] == '""':
                 print(statement[1][1:-1])
-            return
-
 
     elif (statement[0] == 'skip'):
         pass
@@ -334,8 +308,7 @@ def evalStatement(classMap, statement,
                 if (globalMu[Gamma[statement[2]]]['type'][0] == 'separate' or globalMu[Gamma[statement[2]]]['status'] != 'nil'):
                     print('Error : seprate-type object can\'t be non-separate-newed.')
                     return 'error'
-                objAddr = makeLocalObj(classMap, globalMu, Gamma[statement[2]])
-                Gamma[statement[2]] = objAddr
+                makeLocalObj(classMap, globalMu, Gamma[statement[2]])
                 
                 
 
@@ -353,7 +326,6 @@ def evalStatement(classMap, statement,
 
     elif (statement[0] == 'copy'):
         #['copy', 'Cell', ['cell'], ['cellCopy']]
-
         pass
 
     elif (statement[0] == 'call' or statement[0] == 'uncall'):
@@ -361,21 +333,28 @@ def evalStatement(classMap, statement,
         # ['call', 'test', [args]]
 
         if len(statement) == 4:  # call method of object
-            objAddr       = Gamma['this']
-            callOrUncall  = statement[0]
-            targetObjAddr = Gamma[statement[1]]
-            methodName    = statement[2]
+            print('hei')
 
-            argsAddr = []
+            if ('gamma' in globalMu[Gamma[statement[1]]].keys() ):
+                t = getType(globalMu[Gamma[statement[1]]]['type'])
+                statements = classMap[t]['methods'][statement[2]]
+                print(statements)
+                pass
+            else:
+                callerAddr    = Gamma['this']
+                callOrUncall  = statement[0]
+                targetObjAddr = Gamma[statement[1]]
+                methodName    = statement[2]
 
-            for varName in statement[3]:
-                varAddr = Gamma[varName]
-                refcountUp(globalMu, varAddr)
-                argsAddr.append(varAddr)
+                argsAddr      = []
+                for varName in statement[3]:
+                    varAddr = Gamma[varName]
+                    refcountUp(globalMu, varAddr)
+                    argsAddr.append(varAddr)
 
-            q = globalMu[targetObjAddr]['methodQ']
-            time.sleep(sys.float_info.min)
-            q.put([methodName, argsAddr, callOrUncall, objAddr, None])
+                q = globalMu[targetObjAddr]['methodQ']
+                time.sleep(sys.float_info.min)
+                q.put([methodName, argsAddr, callOrUncall, callerAddr, None])
 
 
         elif len(statement) == 3:  # call method of local object
@@ -493,8 +472,8 @@ def interpreter(classMap,
                 
                 if (request[4] != None):
                     # attached
-                    print ('main ProcDict :',ProcDict)
-                    if (request[0] != 'main' ):
+                    print ('main ProcDict :', ProcDict)
+                    if (request[0] != 'main'):
                         request[4].send(methodName + ' method ended')
                     elif (request[0] == 'main' and len(ProcDict) == 0):
                         request[4].send(methodName + ' method ended')

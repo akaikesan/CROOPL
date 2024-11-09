@@ -16,10 +16,9 @@ class Program
     private method main()
         data1 ^=  1
         data2 ^=  2 
-        new separate Proc1 p
         new  Proc1 p2
-        //call  p::get(data1, data2)
-        //uncall p::get(data1, data2)
+        call  p2::get(data1, data2)
+        uncall p2::get(data1, data2)
         
 
     private method pr(int data, int output)

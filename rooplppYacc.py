@@ -369,7 +369,7 @@ def yacc_test():
 
 
     # storeProcess.terminate()
-    # initProcess.terminate()
+    initProcess.terminate()
 
 
 
