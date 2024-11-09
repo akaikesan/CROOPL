@@ -277,7 +277,7 @@ def evalStatement(classMap, statement,
     elif (statement[0] == 'print'):
         if statement[1][0] == '"' and statement[1][-1] == '"':
             print(statement[1][1:-1])
-            printMU(Gamma, globalMu)
+            printMU(Gamma,globalMu)
 
     elif (statement[0] == 'skip'):
         pass
@@ -334,27 +334,33 @@ def evalStatement(classMap, statement,
         if len(statement) == 4:  # call method of object
 
             if ('gamma' in globalMu[Gamma[statement[1]]].val.keys() ):
-                t          = getType(globalMu[Gamma[statement[1]]]['type'])
+                # call for local object
+
+                t          = getType(globalMu[Gamma[statement[1]]].val['type'])
                 statements = classMap[t]['methods'][statement[2]]['statements']
                 funcArgs   = classMap[t]['methods'][statement[2]]['args']
                 passedArgs = statement[3]
-                localGamma = globalMu[Gamma[statement[1]]]['gamma']
+                localGamma = globalMu[Gamma[statement[1]]].val['gamma']
 
                 for i in range(len(funcArgs)):
                     localGamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
 
-                for s in statements:
-                    evalStatement(classMap, s, localGamma, globalMu,invert)
+                if(invert):
+                    for s in reversed(statements):
+                        evalStatement(classMap, s, localGamma, globalMu, invert)
+                else:
+                    for s in statements:
+                        evalStatement(classMap, s, localGamma, globalMu, invert)
 
                 for i in range(len(funcArgs)):
                     localGamma.pop(funcArgs[i]['name'])
                 obj = globalMu[Gamma[statement[1]]]
-                obj['gamma'] = localGamma
+                obj.val['gamma'] = localGamma
                 globalMu[Gamma[statement[1]]] = obj
 
 
-
             else:
+                # call for remote object
                 callerAddr    = Gamma['this']
                 callOrUncall  = statement[0]
                 targetObjAddr = Gamma[statement[1]]
@@ -372,7 +378,6 @@ def evalStatement(classMap, statement,
 
 
         elif len(statement) == 3:  # call method of local object
-
 
             if (statement[0] == 'uncall'):
                 invert = not invert
@@ -433,6 +438,7 @@ def interpreter(classMap,
             request = q.get()
             lenReq = len(request)
 
+            print(request)
             if lenReq == 5:
 
                 methodName   = request[0]
@@ -446,39 +452,49 @@ def interpreter(classMap,
                 funcArgs = classMap[getType(procObjtype)]['methods'][methodName]['args']
 
                 # append args to Gamma
-
                 if (len(passedArgs) == len(funcArgs)):
                     for i in range(len(funcArgs)):
                         Gamma[funcArgs[i]['name']] = passedArgs[i]
 
+                # check correspondency with historyTop
                 if callORuncall == 'uncall':
-                    #check Stack-Emptiness
                     if historyStack.qsize() != 0:
                         historyTop = historyStack.get()
                     else:
                         q.put(request)
                         continue
+                    print('historyTop',historyTop)
 
-                    # check correspondency with historyTop
                     if ((request[0])  != historyTop[0] or request[3] != historyTop[3]) or (historyTop[2] != 'call'):
+
+                        print('hello?')
                         q.put(request)
                         continue
-
+                    # DO NOT invert 'invert' before REQUEUE!    
                     invert = not invert
+
                 
                 # Eval Statements
-                for s in statements:
-                    result = evalStatement(classMap, s, Gamma, globalMu, invert)
-                    if result == 'error':
-                        print('Error :', s, 'in', methodName)
-                        break
+                if invert :
+                    for s in reversed(statements):
+                        result = evalStatement(classMap, s, Gamma, globalMu, invert)
+                        if result == 'error':
+                            print('Error :', s, 'in', methodName)
+                            break
+                else:
+                    for s in statements:
+                        result = evalStatement(classMap, s, Gamma, globalMu, invert)
+                        if result == 'error':
+                            print('Error :', s, 'in', methodName)
+                            break
 
-                # decrement reference Counter
+                # decrement reference Counter & remove args from Gamma
                 for i in range(len(passedArgs)):
                     Gamma.pop(funcArgs[i]['name'])
                     refcountDown(globalMu, passedArgs[i])
 
 
+                # historyStack after execution
                 if callORuncall == 'call':
                     historyStack.put(request)
                 elif callORuncall == 'uncall':
