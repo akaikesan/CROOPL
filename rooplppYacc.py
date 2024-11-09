@@ -341,6 +341,8 @@ def yacc_test():
     # generate Process
     m = mp.Manager()
     globalMu = m.dict()
+    ProcDict = m.dict()
+
     varType = 'Program'
     
     '''
@@ -365,7 +367,7 @@ def yacc_test():
 
     print(parent_conn.recv())
 
-    #storeProcess.terminate()
+    # storeProcess.terminate()
     initProcess.terminate()
 
 '''

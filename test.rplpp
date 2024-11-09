@@ -9,17 +9,15 @@ class Program
     int data1 
     int data2
     int data3 
-    int x 
     separate Proc1 p
 
 
     private method main()
-        print ""
-        x += 200
-        data1 ^= x + 1
-        data2 ^= data1 + 1
+        data1 ^=  1
+        data2 ^=  2 
         new separate Proc1 p
-        call p::get(x, data2)
+        call   p::get(data1, data2)
+        uncall p::get(data1, data2)
         
 
     private method pr(int data, int output)

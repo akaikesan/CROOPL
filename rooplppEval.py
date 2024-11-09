@@ -301,6 +301,7 @@ def makeSeparatedProcess(classMap,
 
 
 
+
     p.start()
     time.sleep(0.1)
 
@@ -463,8 +464,6 @@ def evalStatement(classMap, statement,
     global ProcessRefCounter
     global ProcessObjName
 
-    if (Gamma['this'] == 8):
-        print(Gamma['this'])
 
     if statement is None:
         return
@@ -528,7 +527,10 @@ def evalStatement(classMap, statement,
             if (len(statement) == 4):
                 if (globalMu[Gamma[statement[2]]]['type'][0] != 'separate' or globalMu[Gamma[statement[2]]]['status'] != 'nil'):
                     raise Exception('non-seprate-type object can\'t be separate-newed.')
+
                 proc, objAddr = makeSeparatedProcess(classMap, statement[1], globalMu)
+                global ProcDict
+                ProcDict[objAddr] = proc
                 Gamma[statement[2]] = objAddr
             if (len(statement) == 3):
                 pass
@@ -611,15 +613,12 @@ def interpreter(classMap,
     global ProcessRefCounter
     ProcessRefCounter = 0
 
+    global ProcDict
+    ProcDict = {}
+
     global historyStack
     historyStack = queue.LifoQueue()
 
-
-    try:
-        sizeOfRequestQueue = q.qsize()
-    except:
-        print('ERROR')
-        raise Exception("interpreter error")
 
     while(True):
 
@@ -627,6 +626,9 @@ def interpreter(classMap,
             request = q.get()
             lenReq = len(request)
 
+            print(request)
+
+            print(ProcDict)
             if lenReq == 5:
 
                 methodName   = request[0]
@@ -635,14 +637,32 @@ def interpreter(classMap,
                 # if objAddr is 0, this intrprtr is running main func
                 objAddr      = request[3] 
 
+
+                print(Gamma['this'])
                 procObjtype = globalMu[Gamma['this']]['type']
                 statements = classMap[procObjtype]['methods'][methodName]['statements']
                 funcArgs = classMap[procObjtype]['methods'][methodName]['args']
 
                 # append args to Gamma
+
                 if (len(passedArgs) == len(funcArgs)):
                     for i in range(len(funcArgs)):
                         Gamma[funcArgs[i]['name']] = passedArgs[i]
+
+                if callORuncall == 'uncall':
+                    #check Stack-Emptiness
+                    if historyStack.qsize() != 0:
+                        historyTop = historyStack.get()
+                    else:
+                        q.put(request)
+                        continue
+
+                    # check correspondency with historyTop
+                    if ((request[0])  != historyTop[0] or request[3] != historyTop[3]) or (historyTop[2] != 'call'):
+                        q.put(request)
+                        continue
+
+                    invert = not invert
                 
                 # Eval Statements
                 for s in statements:
@@ -656,10 +676,13 @@ def interpreter(classMap,
                 for argAddr in passedArgs:
                     refcountDown(globalMu, argAddr)
 
-                printMU(Gamma, globalMu)
-                # I know. sorry
-                time.sleep(0.1)
+                printMU(Gamma,globalMu)
 
+                if callORuncall == 'call':
+                    historyStack.put(request)
+                elif callORuncall == 'uncall':
+                    invert = not invert
+                    historyStack.get()
                 
                 if (request[4] != None):
                     # attached

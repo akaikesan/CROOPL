@@ -20,9 +20,30 @@ class Value:
         self.ref -= 1
 
 
+def printMU(Gamma, MU):
+    print(Gamma)
+    for k, v in MU.items():
+        if type(v) == Value :
+            print(k, ':', '(', v.val, ',', v.ref, ')')
+        else:
+            print(k, ':', v)
+
+
+def refcountUp(globalMu, addr):
+    v = globalMu[addr]
+    v.countUp()
+    globalMu[addr] = v
+
+def refcountDown(globalMu, addr):
+    v = globalMu[addr]
+    v.countDown()
+    globalMu[addr] = v
 
 def writeMu(Gamma, globalMu, var, val):
-    globalMu[Gamma[var]] = val
+    v =  globalMu[Gamma[var]]
+    globalMu[Gamma[var]] = Value(val, v.ref)
+
+
 
 
 def passArgs(globalStore, argsInfo, passedArgs,storePath, envObjName):
@@ -277,8 +298,11 @@ def makeSeparatedProcess(classMap,
                          Gamma,
                          globalMu))
 
-    time.sleep(sys.float_info.min)
+
+
+
     p.start()
+    time.sleep(0.1)
 
     return p, objAddr 
 
@@ -354,7 +378,6 @@ def checkNil(object):
 
 def evalExp(Gamma, globalMu, exp):
 
-
     if isinstance(exp, list):
         if len(exp) == 1:
             # [<int>] 
@@ -375,7 +398,6 @@ def evalExp(Gamma, globalMu, exp):
             elif (exp[1] == '*'):
                 return evalExp(Gamma, globalMu, exp[0]) * evalExp(Gamma, globalMu, exp[2])
             elif (exp[1] == '='):
-
                 e1 = checkNil(evalExp(thisStore, exp[0]))
                 e2 = checkNil(evalExp(thisStore, exp[2]))
                 return e1 == e2
@@ -401,6 +423,15 @@ def evalExp(Gamma, globalMu, exp):
     elif exp.isdecimal():
         # int (exp[0] is string. turn it to int Here.)
         return int(exp)
+    else:
+        content = globalMu[Gamma[exp]]
+        if type(content) == int:
+            return int(content)
+        elif type(content) == Value:
+            return content.val
+        else:
+            print(content, 'is not int or Value')
+        
 
 
 
@@ -424,8 +455,7 @@ def getAssignmentResult(assignment, invert, left, right):
 
 
 
-def evalStatement(classMap,
-                  statement,
+def evalStatement(classMap, statement,
                   Gamma,
                   globalMu,
                   invert):
@@ -433,32 +463,48 @@ def evalStatement(classMap,
     global ProcessRefCounter
     global ProcessObjName
 
+    if (Gamma['this'] == 8):
+        print(Gamma['this'])
+
     if statement is None:
         return
     if (statement[0] == 'assignment'): 
         # p[0] = ['assignment', p[2], p[1], p[3]]
         # ex) x += 2+1 -> ['assignment', +=, x, 2+1]
+        if (statement[1] == '<=>'):
+            leftAddr = Gamma[statement[2]]
+            rightAddr = Gamma[statement[3]]
+            leftContent = globalMu[leftAddr]
+            rightContent = globalMu[rightAddr]
 
-        # readMu
-        left = 0
-        try:
-            left = globalMu[Gamma[statement[2]]][0]
-        except:
-            print(statement[2], 'is not defined in class', '\'' + globalMu[Gamma['this']]['type'] + '\'')
+            leftContentVal = leftContent.val
+            rightContentVal = rightContent.val
+            leftContent.val = rightContentVal
+            rightContent.val = leftContentVal
 
-        right = evalExp(Gamma, globalMu, statement[3])
+            globalMu[leftAddr] = leftContent
+            globalMu[rightAddr] = rightContent
 
-        result = getAssignmentResult(statement[1], invert, left, right)
+        else:
+            # readMu
+            left = 0
+            try:
+                addr = Gamma[statement[2]]
+                left = globalMu[addr].val
+            except:
+                print(statement[2], 'is not defined in class', '\'' + globalMu[Gamma['this']]['type'] + '\'')
 
-        # writeMu
-        writeMu(Gamma, globalMu, statement[2], result)
-        pass
+            right = evalExp(Gamma, globalMu, statement[3])
+
+            result = getAssignmentResult(statement[1], invert, left, right)
+
+            # writeMu
+            writeMu(Gamma, globalMu, statement[2], result)
 
     elif (statement[0] == 'print'):
         if statement[1][0] == '"':
             if statement[1] == '""':
-                print(globalMu) 
-            print(statement[1][1:-1])
+                print(statement[1][1:-1])
             return
 
         '''
@@ -480,7 +526,6 @@ def evalStatement(classMap,
         else: 
             # new object
             if (len(statement) == 4):
-                print(globalMu[Gamma[statement[2]]])
                 if (globalMu[Gamma[statement[2]]]['type'][0] != 'separate' or globalMu[Gamma[statement[2]]]['status'] != 'nil'):
                     raise Exception('non-seprate-type object can\'t be separate-newed.')
                 proc, objAddr = makeSeparatedProcess(classMap, statement[1], globalMu)
@@ -509,17 +554,21 @@ def evalStatement(classMap,
         # ['call', 'test', [args]]
 
         if len(statement) == 4:  # call method of object
-            objAddr = Gamma['this']
-            methodName = statement[2]
-            callOrUncall = statement[0]
+            objAddr       = Gamma['this']
+            callOrUncall  = statement[0]
+            targetObjAddr = Gamma[statement[1]]
+            methodName    = statement[2]
 
             argsAddr = []
-            for a in statement[3]:
-                argsAddr.append(Gamma[a])
 
-            q = globalMu[objAddr]['methodQ']
+            for varName in statement[3]:
+                varAddr = Gamma[varName]
+                refcountUp(globalMu, varAddr)
+                argsAddr.append(varAddr)
 
-            q.put([methodName, argsAddr, callOrUncall, objAddr])
+            q = globalMu[targetObjAddr]['methodQ']
+            time.sleep(sys.float_info.min)
+            q.put([methodName, argsAddr, callOrUncall, objAddr, None])
 
 
         elif len(statement) == 3:  # call method of local object
@@ -566,158 +615,56 @@ def interpreter(classMap,
     historyStack = queue.LifoQueue()
 
 
-
+    try:
+        sizeOfRequestQueue = q.qsize()
+    except:
+        print('ERROR')
+        raise Exception("interpreter error")
 
     while(True):
-        
-        try:
-            sizeOfRequestQueue = q.qsize()
-        except:
-            raise Exception("interpreter error")
 
-        if sizeOfRequestQueue != 0:
-            # an object sent request to this Process
-
-            # sort Request Elements
+        if q.qsize() != 0:
             request = q.get()
             lenReq = len(request)
 
-            if lenReq == 1:
-                request[0].send(historyStack.qsize())
-                continue
+            if lenReq == 5:
 
-            elif lenReq == 2:
-
-                if not evalExp(Gamma, request[1]):
-                    q.put(request)
-                    #print('wait ensure again')
-                    continue
-
-            elif lenReq == 3:
-
-                if not evalExp(Gamma[ProcessObjName], request[1]):
-                    q.put(request)
-                    #print('wait ensure again')
-                    continue
-
-                # print('send')
-                request[2].send('signal')
-
-            elif lenReq >= 8:
-                # attached
-
-                methodName = request[0]
-                args = request[1]
+                methodName   = request[0]
+                passedArgs   = request[1]
                 callORuncall = request[2]
-                callerReference = request[3]
-                argsInfo = request[4]
-                PassedArgs = request[5]
-                storePath = request[6]
-                callerEnv = request[7] 
-                l = callerReference.split('/')
-                callerObjName = l[0]
-                dictAddress = '/'.join(l[:-1])
+                # if objAddr is 0, this intrprtr is running main func
+                objAddr      = request[3] 
 
+                procObjtype = globalMu[Gamma['this']]['type']
+                statements = classMap[procObjtype]['methods'][methodName]['statements']
+                funcArgs = classMap[procObjtype]['methods'][methodName]['args']
 
+                # append args to Gamma
+                if (len(passedArgs) == len(funcArgs)):
+                    for i in range(len(funcArgs)):
+                        Gamma[funcArgs[i]['name']] = passedArgs[i]
+                
+                # Eval Statements
+                for s in statements:
+                    evalStatement(classMap,
+                              s,
+                              Gamma,
+                              globalMu,
+                              invert)
 
+                # decrement reference Counter
+                for argAddr in passedArgs:
+                    refcountDown(globalMu, argAddr)
 
-
-                #print("uncalling? attached")
-                #print(request)
-                if callORuncall == 'uncall':
-                    methodInfo = historyStack.get()
-
-                    if methodInfo[0] == callerObjName and methodInfo[1] == methodName:
-                        pass
-                    else:
-                        methodInfo = historyStack.put(methodInfo)
-                        q.put(request)
-                        continue
-
-
-
-                if 'require' in classMap[className]['methods'][methodName].keys():
-                    requireExp = classMap[className]['methods'][methodName]['require']
-
-                    ensureExp = classMap[className]['methods'][methodName]['ensure']
-                    if callORuncall == 'uncall':
-                        requireExp, ensureExp = ensureExp, requireExp
-
-                    if not evalExp(globalStore[ProcessObjName], requireExp):
-                        # print('wait require attached')
-                        q.put(request)
-                        continue
-
-                passArgs(Gamma, argsInfo, PassedArgs, storePath, callerEnv)
-
-                # attached object's call
-                startStatement = [callORuncall,
-                                  methodName,
-                                  args]
-                evalStatement(classMap,
-                          startStatement,
-                          Gamma,
-                          procName,
-                          className,
-                          invert,
-                          )
-
-                argsInfo = classMap[className]['methods'][methodName]['args']
-
-
-
-                        
-                reflectArgsPassedSeparated(Gamma, 
-                                           callerObjName, 
-                                           procName, 
-                                           argsInfo, 
-                                           args, 
-                                           dictAddress)
-
-                if 'require' in classMap[className]['methods'][methodName].keys():
-                    requireExp = classMap[className]['methods'][methodName]['require']
-
-
-                    ensureExp = classMap[className]['methods'][methodName]['ensure']
-                    if callORuncall == 'uncall':
-                        requireExp, ensureExp = ensureExp, requireExp
-
-                    if not evalExp(globalStore[ProcessObjName], ensureExp):
-                        request = ['waitEnsure', ensureExp, request[3]]
-                        # print('wait ensure attached')
-                        q.put(request)
-                        continue
+                printMU(Gamma, globalMu)
+                # I know. sorry
+                time.sleep(0.1)
 
                 
+                if (request[4] != None):
+                    # attached
+                    request[4].send(methodName + ' method ended')
 
-                if callORuncall == 'call':
-                    historyStack.put([callerObjName, methodName])
-
-                if (lenReq == 9):
-                    request[-1].send('signal')
-                    # print('send')
-
-            elif lenReq == 4:
-                # lenReq == 5 only when main method is called
-
-                methodName = request[0]
-                args = request[1]
-                callORuncall = request[2]
-                child_conn = request[3]
-
-                # detachable object's call
-                startStatement = [callORuncall,
-                                  methodName,
-                                  args]
-                evalStatement(classMap,
-                          startStatement,
-                          Gamma,
-                          globalMu,
-                          invert)
-                print(globalMu)
-                
-
-                child_conn.send('main method ended')
 
 
 
