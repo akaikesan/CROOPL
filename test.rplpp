@@ -30,7 +30,8 @@ class Program
 
 
     private method main()
-        new separate Proc2 p
+        new separate Proc1 p2
+        copy separate Proc1 p2 p3
         call p::get()
         uncall p::get()
         print ""

@@ -5,7 +5,6 @@ import queue
 
 
 class Value:
-
     def __init__(self, v):
         self.val = v
         self.ref = 1
@@ -89,7 +88,6 @@ def statementInverter(statement, invert):
             returnStatement[6] = id1
             returnStatement[7] = exp1
             return returnStatement
-
 
 def printMU(Gamma, MU):
     print(Gamma)
@@ -201,7 +199,6 @@ def checkListIsDeletable(list):
     for i in list:
         if i != 0:
             raise Exception("you can invert-new only 0-initialized array")
-
 
 def evalExp(Gamma, globalMu, exp, invert):
     # expression doesnt care about invert???
@@ -369,6 +366,7 @@ def evalStatement(classMap,
 
     elif (statement[0] == 'copy'):
         #['copy', 'Cell', ['cell'], ['cellCopy']]
+        print(statement)
         pass
 
     elif (statement[0] == 'call' or statement[0] == 'uncall'):
@@ -410,6 +408,7 @@ def evalStatement(classMap,
 
             else:
                 # call for remote object
+                print(statement)
                 callerAddr    = Gamma['this']
                 callOrUncall  = statement[0]
                 targetObjAddr = globalMu[Gamma[statement[1]]].val
