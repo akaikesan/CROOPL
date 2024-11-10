@@ -41,6 +41,11 @@ def statementInverter(statement, invert):
             returnStatement[0] = 'uncopy'
             return returnStatement
 
+        elif (statement[0] == 'uncopy'):
+            #['copy', 'Cell', ['cell'], ['cellCopy']]
+            returnStatement[0] = 'copy'
+            return returnStatement
+
         elif (statement[0] == 'call' or statement[0] == 'uncall'):
             # ['call', 'tc', 'test', [args]]
             # ['call', 'test', [args]]
@@ -122,7 +127,7 @@ def getType(t):
 def setNewedObj(classMap, objType, Gamma, globalMu, q):
     fields = classMap[getType(objType)]['fields']
     for f in fields.keys():
-        l = len(globalMu.keys())
+        l = max(globalMu.keys()) + 1
         Gamma[f] = l
         if fields[f][0] == 'int':
             v = Value(0)
@@ -200,7 +205,7 @@ def checkListIsDeletable(list):
         if i != 0:
             raise Exception("you can invert-new only 0-initialized array")
 
-def evalExp(Gamma, globalMu, exp, invert):
+def evalExp(classMap,thisType,Gamma, globalMu, exp, invert):
     # expression doesnt care about invert???
     if isinstance(exp, list):
         if len(exp) == 1:
@@ -213,42 +218,47 @@ def evalExp(Gamma, globalMu, exp, invert):
 
         else:
             if (exp[1] == '+'):
-                return evalExp(Gamma, globalMu, exp[0], invert) + evalExp(Gamma, globalMu, exp[2], invert)
+                return evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert) + evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '-'):
-                return evalExp(Gamma, globalMu, exp[0], invert) - evalExp(Gamma, globalMu, exp[2], invert)
+                return evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert) - evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
 
             elif (exp[1] == '/'):
-                return evalExp(Gamma, globalMu, exp[0], invert) / evalExp(Gamma, globalMu, exp[2], invert)
+                return evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert) / evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '*'):
-                return evalExp(Gamma, globalMu, exp[0], invert) * evalExp(Gamma, globalMu, exp[2], invert)
+                return evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert) * evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '='):
-                e1 = evalExp(Gamma, globalMu, exp[0], invert)
-                e2 = evalExp(Gamma, globalMu, exp[2], invert)
+                print(exp)
+                e1 = evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert)
+                print(e1)
+                e2 = evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
+                print(e2)
                 return e1 == e2
 
             elif (exp[1] == '!='):
-
-                e1 = evalExp(Gamma, globalMu, exp[0], invert)
-                e2 = evalExp(Gamma, globalMu, exp[2], invert)
+                e1 = evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert)
+                e2 = evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
                 return e1 != e2
 
             elif (exp[1] == '%'):
-                return evalExp(Gamma, globalMu, exp[0], invert) % evalExp(Gamma, globalMu, exp[2], invert)
+                return evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert) % evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '&'):
-                return evalExp(Gamma, globalMu, exp[0], invert) and evalExp(Gamma, globalMu, exp[2], invert)
+                return evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert) and evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '>'):
-                return evalExp(Gamma, globalMu, exp[0], invert) > evalExp(Gamma, globalMu, exp[2], invert)
+                return evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert) > evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '<='):
-                return evalExp(Gamma, globalMu, exp[0], invert) <= evalExp(Gamma, globalMu, exp[2], invert)
+                return evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert) <= evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '>='):
-                return evalExp(Gamma, globalMu, exp[0], invert) >= evalExp(Gamma, globalMu, exp[2], invert)
+                return evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert) >= evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '<'):
-                return evalExp(Gamma, globalMu, exp[0], invert) < evalExp(Gamma, globalMu, exp[2], invert)
+                return evalExp(classMap,thisType,Gamma, globalMu, exp[0], invert) < evalExp(classMap,thisType,Gamma, globalMu, exp[2], invert)
 
     elif exp.isdecimal():
         # int (exp[0] is string. turn it to int Here.)
         return int(exp)
+    elif exp == 'nil':
+        return 'nil'
     else:
+        print(classMap[getType(thisType)]['fields'])
         content = globalMu[Gamma[exp]]
         if type(content) == int:
             return int(content)
@@ -287,6 +297,8 @@ def evalStatement(classMap,
     elif (statement[0] == 'assignment'): 
         # p[0] = ['assignment', p[2], p[1], p[3]]
         # ex) x += 2+1 -> ['assignment', +=, x, 2+1]
+
+        thisType = globalMu[globalMu[Gamma['this']].val]['type']
         if (statement[1] == '<=>'):
             leftAddr = Gamma[statement[2]]
             rightAddr = Gamma[statement[3]]
@@ -310,7 +322,7 @@ def evalStatement(classMap,
             except:
                 print(statement[2], 'is not defined in class', '\'' + getType(globalMu[globalMu[Gamma['this']].val]['type']) + '\'')
 
-            right = evalExp(Gamma, globalMu, statement[3], invert)
+            right = evalExp(classMap,thisType,Gamma, globalMu, statement[3], invert)
 
             result = getAssignmentResult(statement[1], invert, left, right)
 
@@ -333,10 +345,14 @@ def evalStatement(classMap,
             pass
         else: 
             # new object
+            
             if (len(statement) == 4):
                 objAddr =  globalMu[Gamma[statement[2]]].val
                 if (globalMu[objAddr]['type'][0] != 'separate' or globalMu[objAddr]['status'] != 'nil'):
-                    print('seprate-type object can\'t be non-separate-newed.')
+                    print('separate-type object can\'t be non-separate-newed.')
+                    return 'error'
+                elif (globalMu[objAddr]['type'][1] != statement[1]):
+                    print('type mismatch',globalMu[objAddr]['type'][1], statement[1] )
                     return 'error'
 
                 proc = makeSeparatedProcess(classMap, globalMu,  Gamma[statement[2]])
@@ -345,8 +361,9 @@ def evalStatement(classMap,
 
             if (len(statement) == 3):
                 objAddr =  globalMu[Gamma[statement[2]]].val
+
                 if (globalMu[objAddr]['type'][0] == 'separate' or globalMu[objAddr]['status'] != 'nil'):
-                    print('Error : seprate-type object can\'t be non-separate-newed.')
+                    print('Error : separate-type object can\'t be non-separate-newed.')
                     return 'error'
                 makeLocalObj(classMap, globalMu, Gamma[statement[2]])
                 
@@ -365,8 +382,25 @@ def evalStatement(classMap,
             pass
 
     elif (statement[0] == 'copy'):
-        #['copy', 'Cell', ['cell'], ['cellCopy']]
-        print(statement)
+        #['copy', 'Cell', 'cell', 'cellCopy']
+        t = getType(statement[1])
+        copyFromVar = Gamma[statement[2]]
+        copyFromVal = globalMu[copyFromVar].val
+
+        copyToVar = Gamma[statement[3]]
+        targetVarVal = globalMu[copyToVar]
+
+        if(globalMu[targetVarVal.val]['status'] != 'nil'):
+            print('Error : copy target should be nil')
+            return 'error'
+        else:
+            # remove nil-obj with no reference
+            globalMu.pop(targetVarVal.val)
+
+        targetVarVal.val = copyFromVal
+        globalMu[copyToVar] = targetVarVal
+
+    elif (statement[0] == 'uncopy'):
         pass
 
     elif (statement[0] == 'call' or statement[0] == 'uncall'):
@@ -379,6 +413,11 @@ def evalStatement(classMap,
         if len(statement) == 4:  # call method of object
             objAddr = globalMu[Gamma[statement[1]]].val
 
+            if (globalMu[objAddr]['status'] == 'nil'):
+                print(statement)
+                print('Error : nil object can\'t be called.')
+                return 'error'
+
             if ('gamma' in globalMu[objAddr].keys() ):
                 # call for local object
 
@@ -387,6 +426,10 @@ def evalStatement(classMap,
                 funcArgs   = classMap[t]['methods'][statement[2]]['args']
                 passedArgs = statement[3]
                 localGamma = globalMu[objAddr]['gamma']
+
+                if (len(funcArgs) != len(passedArgs)):
+                    print('Error : number of arguments is not matched.')
+                    return 'error'
 
                 for i in range(len(funcArgs)):
                     localGamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
@@ -399,8 +442,10 @@ def evalStatement(classMap,
 
                 for s in stmts:
                     evalStatement(classMap, s, localGamma, globalMu, invert)
+
                 for i in range(len(funcArgs)):
                     localGamma.pop(funcArgs[i]['name'])
+                    
                 obj = globalMu[objAddr]
                 obj['gamma'] = localGamma
                 globalMu[objAddr] = obj
@@ -408,7 +453,6 @@ def evalStatement(classMap,
 
             else:
                 # call for remote object
-                print(statement)
                 callerAddr    = Gamma['this']
                 callOrUncall  = statement[0]
                 targetObjAddr = globalMu[Gamma[statement[1]]].val
@@ -431,11 +475,15 @@ def evalStatement(classMap,
                 invert = not invert
 
 
+            
             objAddr = globalMu[Gamma['this']].val
             t          = getType(globalMu[objAddr]['type'])
-            statements = classMap[t]['methods'][statement[2]]['statements']
-            funcArgs   = classMap[t]['methods'][statement[2]]['args']
-            localGamma = globalMu[objAddr]['gamma']
+            statements = classMap[t]['methods'][statement[1]]['statements']
+            funcArgs   = classMap[t]['methods'][statement[1]]['args']
+            passedArgs = statement[2]
+
+            for i in range(len(funcArgs)):
+                Gamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
 
 
             stmts = []
@@ -445,7 +493,10 @@ def evalStatement(classMap,
                 stmts = statements 
 
             for s in stmts:
-                evalStatement(classMap, s, localGamma, globalMu, invert)
+                evalStatement(classMap, s, Gamma, globalMu, invert)
+
+            for i in range(len(funcArgs)):
+                Gamma.pop(funcArgs[i]['name'])
 
 
         if (statement[0] == 'uncall'):
@@ -454,7 +505,8 @@ def evalStatement(classMap,
 
 
     elif (statement[0] == 'if'):  # statement[1:4] = [e1, s1, s2, e2]
-        e1Evaled = evalExp(Gamma, globalMu, statement[1], invert)
+        thisType = globalMu[globalMu[Gamma['this']].val]['type']
+        e1Evaled = evalExp(classMap,thisType,Gamma, globalMu, statement[1], invert)
         assert type(e1Evaled) == bool
         if e1Evaled :# if-True
             stmts = []
@@ -466,7 +518,7 @@ def evalStatement(classMap,
             for s in stmts:
                 evalStatement(classMap, s, Gamma, globalMu, invert)
 
-            e2Evaled = evalExp(Gamma, globalMu, statement[4], invert)
+            e2Evaled = evalExp(classMap,thisType,Gamma, globalMu, statement[4], invert)
             assert e2Evaled == True 
         else:       # if-False
             stmts = []
@@ -478,7 +530,7 @@ def evalStatement(classMap,
             for s in stmts:
                 evalStatement(classMap, s, Gamma, globalMu, invert)
 
-            e2Evaled = evalExp(Gamma, globalMu, statement[4], invert)
+            e2Evaled = evalExp(classMap,thisType,Gamma, globalMu, statement[4], invert)
             assert e2Evaled == False
 
 
@@ -487,7 +539,9 @@ def evalStatement(classMap,
 
 
     elif (statement[0] == 'from'):  # statement[1:4] = [e1, s1, s2, e2]
-        assert evalExp(Gamma, globalMu, statement[1], invert) == True
+
+        thisType = globalMu[globalMu[Gamma['this']].val]['type']
+        assert evalExp(classMap,thisType,Gamma, globalMu, statement[1], invert) == True
         stmts = []
         if invert :
             stmts = reversed(statement[1])
@@ -497,7 +551,7 @@ def evalStatement(classMap,
         for s in stmts:
             evalStatement(classMap, s, Gamma, globalMu, invert)
 
-        while evalExp(Gamma, globalMu, statement[4], invert) == False:
+        while evalExp(classMap,thisType,Gamma, globalMu, statement[4], invert) == False:
 
             if invert :
                 stmts = reversed(statement[3])
@@ -507,7 +561,7 @@ def evalStatement(classMap,
             for s in stmts:
                 evalStatement(classMap, s, Gamma, globalMu, invert)
 
-            assert evalExp(Gamma, globalMu, statement[1], invert) == False
+            assert evalExp(classMap,thisType,Gamma, globalMu, statement[1], invert) == False
 
             if invert :
                 stmts = reversed(statement[1])
@@ -523,12 +577,46 @@ def evalStatement(classMap,
 
     # LOCAL:0 type:1 id:2 EQ exp:3  statements:4 DELOCAL type:5 id:6 EQ exp:7
     elif (statement[0] == 'local'):
-        if (statement[1][0] == 'separate'):  # local variable
-            pass
-        elif statement[1][0] == 'int':
-            l = len(globalMu.keys())
+
+        thisType = globalMu[globalMu[Gamma['this']].val]['type']
+        if (statement[1][0] == 'separate'):
+
+            if (evalExp(classMap,thisType,Gamma, globalMu, statement[3], invert) != 'nil'):
+                print('Error : local object must be nil-initialized.')
+                return 'error'
+
+            l = max(globalMu.keys()) + 1
             Gamma[statement[2]] = l
-            initValue = evalExp(Gamma, globalMu, statement[3], invert)
+            globalMu[l] = Value(-1)
+            objAddr = max(globalMu.keys()) + 1
+            globalMu[l] = Value(objAddr)
+            globalMu[objAddr] = {'type': statement[1], 'status': 'nil' }
+
+            stmts = []
+            if invert :
+                stmts = reversed(statement[4])
+            else:
+                stmts = statement[4]
+
+            for s in stmts:
+                evalStatement(classMap, s, Gamma, globalMu, invert)
+
+            assertValue = evalExp(classMap,thisType,Gamma, globalMu, statement[7], invert)
+            addr = Gamma[statement[6]]
+
+            assert  assertValue == 'nil'
+            assert statement[2] == statement[6]
+            assert globalMu[globalMu[addr].val]['status'] == 'nil'
+
+            Gamma.pop(statement[6])
+            globalMu.pop(addr)
+
+
+
+        elif statement[1][0] == 'int':
+            l = max(globalMu.keys()) + 1
+            Gamma[statement[2]] = l
+            initValue = evalExp(classMap,thisType,Gamma, globalMu, statement[3], invert)
             assert type(initValue) == int
             globalMu[l] = Value(initValue)
             stmts = []
@@ -540,7 +628,7 @@ def evalStatement(classMap,
             for s in stmts:
                 evalStatement(classMap, s, Gamma, globalMu, invert)
 
-            assertValue = evalExp(Gamma, globalMu, statement[7], invert)
+            assertValue = evalExp(classMap,thisType,Gamma, globalMu, statement[7], invert)
             addr = Gamma[statement[6]]
 
             assert  assertValue == globalMu[addr].val
@@ -549,7 +637,37 @@ def evalStatement(classMap,
             Gamma.pop(statement[6])
             globalMu.pop(addr)
 
-        
+        else:
+            if (evalExp(classMap,thisType,Gamma, globalMu, statement[3], invert) != 'nil'):
+                print('Error : local object must be nil-initialized.')
+                return 'error'
+
+            l = max(globalMu.keys()) + 1
+            Gamma[statement[2]] = l
+            globalMu[l] = Value(-1)
+            objAddr = max(globalMu.keys()) + 1
+            globalMu[l] = Value(objAddr)
+            globalMu[objAddr] = {'type': statement[1], 'status': 'nil' }
+
+            stmts = []
+            if invert :
+                stmts = reversed(statement[4])
+            else:
+                stmts = statement[4]
+
+            for s in stmts:
+                evalStatement(classMap, s, Gamma, globalMu, invert)
+
+            assertValue = evalExp(classMap,thisType,Gamma, globalMu, statement[7], invert)
+            addr = Gamma[statement[6]]
+            print(addr)
+
+            assert  assertValue == 'nil'
+            assert statement[2] == statement[6]
+            assert globalMu[globalMu[addr].val]['status'] == 'nil'
+
+            Gamma.pop(statement[6])
+            globalMu.pop(addr)
 
     return 'success'
 

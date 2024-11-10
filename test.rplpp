@@ -32,8 +32,8 @@ class Program
     private method main()
         new separate Proc1 p2
         copy separate Proc1 p2 p3
-        call p::get()
-        uncall p::get()
+        call p2::get(data1, data2)
+        call p2::get(data1, data2)
         print ""
 
     private method pr(int data, int output)

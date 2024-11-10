@@ -198,11 +198,10 @@ def p_anyIds1(p):
     | arg
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = [p[1]]
     if len(p) == 4:
-        ids = [p[1]]
-        ids.append(p[3])
-        p[0] = ids
+        ids = p[1]
+        p[0] = ids + [p[3]]
 
 
 def p_statement(p):

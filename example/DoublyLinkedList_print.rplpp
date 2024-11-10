@@ -75,24 +75,26 @@ class Program
 
     method main()
         new DoublyLinkedList list
-        listLength += 10
+        listLength += 3 
 
-        local int x = 0
-        from x = 0 do skip
+        local int x = 1
+        from x = 1 do skip
         loop
           local Cell cell = nil
           new Cell cell
 
           local Cell cellCopy = nil
+            print ""
             copy Cell cell cellCopy
             call cell::setSelf(cellCopy)
           delocal Cell cellCopy = nil
 
           call cell::setData(x)
           call list::appendCell(cell)
-          delocal Cell cell = nil
-          call list::pr() 
           print ""
+          delocal Cell cell = nil
           x += 1
         until x = listLength
+
+        call list::pr() 
         delocal int x = listLength
