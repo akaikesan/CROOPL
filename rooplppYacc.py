@@ -341,9 +341,9 @@ def yacc_test():
     # nil-init Program object in Mu.
     m = mp.Manager()
     globalMu = m.dict()
-    globalMu[0]  = Value(None)
+    globalMu[0]  = Value(None, 'Address')
     objAddrValue = len(globalMu.keys())
-    globalMu[0]  = Value(objAddrValue)
+    globalMu[0]  = Value(objAddrValue, 'Address')
     globalMu[objAddrValue] = {'status': 'nil', 'type' : ['separate','Program']}
 
     
