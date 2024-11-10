@@ -3,13 +3,12 @@ import time
 import sys
 import queue
 
-class Value:
-    val = 0
-    ref = 0
 
-    def __init__(self, a, b):
-        self.val = a
-        self.ref = b
+class Value:
+
+    def __init__(self, v):
+        self.val = v
+        self.ref = 1
 
     def countUp(self):
         self.ref += 1
@@ -17,15 +16,15 @@ class Value:
     def countDown(self):
         self.ref -= 1
 
-
 def printMU(Gamma, MU):
     print(Gamma)
     for k, v in MU.items():
         if type(v) == Value :
             print(k, ':', '(', v.val, ',', v.ref, ')')
+        elif type(v) == dict:
+            print(k, ':', v)
         else:
-            print("Internal Error: value is not Value type")
-
+            print('unexpected Type')
 
 def refcountUp(globalMu, addr):
     v = globalMu[addr]
@@ -39,8 +38,7 @@ def refcountDown(globalMu, addr):
 
 def writeMu(Gamma, globalMu, var, val):
     v =  globalMu[Gamma[var]]
-    globalMu[Gamma[var]] = Value(val, v.ref)
-
+    globalMu[Gamma[var]] = Value(val)
 
 def getType(t):
     if t[0] == 'separate':
@@ -48,25 +46,30 @@ def getType(t):
     else:
         return t[0]
 
-
 def setNewedObj(classMap, objType, Gamma, globalMu, q):
     fields = classMap[getType(objType)]['fields']
     for f in fields.keys():
         l = len(globalMu.keys())
         Gamma[f] = l
         if fields[f][0] == 'int':
-            v = Value(0,1)
+            v = Value(0)
             globalMu[l] = v
         elif fields[f][0] == 'list':
             pass
         else:
-            globalMu[l] = Value({'type':fields[f], 'status': 'nil'}, 1)
+            globalMu[l] = Value(None)
+            objAddrValue = len(globalMu.keys())
+            globalMu[l] = Value(objAddrValue)
+            globalMu[objAddrValue] = {'type':fields[f], 'status': 'nil'}
 
-    globalMu[Gamma['this']] = Value({'methodQ':q, 'type': objType, 'status': 'newed'}, 1)
+
+    objAddrValue = globalMu[Gamma['this']].val
+    nilobj = globalMu[objAddrValue]
+    nilobj['status'] = 'newed'
+    nilobj['methodQ'] = q
+    globalMu[objAddrValue] = nilobj
 
     return
-
-
 
 def makeLocalObj(classMap,
                  globalMu,
@@ -80,14 +83,12 @@ def makeLocalObj(classMap,
     obj = globalMu[addr] 
     obj.val['gamma'] = Gamma
     globalMu[addr] = obj
-
-
  
 def makeSeparatedProcess(classMap,
                          globalMu,
                          addr):
     Gamma = {'this' : addr} 
-    objType = globalMu[addr].val['type']
+    objType = globalMu[globalMu[addr].val]['type']
 
     global m
     if addr == 0:
@@ -112,10 +113,6 @@ def makeSeparatedProcess(classMap,
 
     return p
 
-
-
-
-
 def checkObjIsDeletable(varList, env):
     env['type'] = 0
     for k in varList :
@@ -124,15 +121,10 @@ def checkObjIsDeletable(varList, env):
         if  not (env[k] == {} or env[k] == 0):
             raise Exception("you can invert-new or delete only nil-initialized object")
 
-
-
-
 def checkListIsDeletable(list):
     for i in list:
         if i != 0:
             raise Exception("you can invert-new only 0-initialized array")
-
-
 
 def checkNil(object):
     if isinstance(object, int):
@@ -145,12 +137,7 @@ def checkNil(object):
     else:
         return object
 
-
-
-
-
 def evalExp(Gamma, globalMu, exp):
-
     if isinstance(exp, list):
         if len(exp) == 1:
             # [<int>] 
@@ -204,11 +191,6 @@ def evalExp(Gamma, globalMu, exp):
             return content.val
         else:
             print(content, 'is not int or Value')
-        
-
-
-
-
 
 def getAssignmentResult(assignment, invert, left, right):
     if (assignment == '^='):
@@ -223,10 +205,6 @@ def getAssignmentResult(assignment, invert, left, right):
             return left + right
         elif assignment == '-=':
             return left - right
-
-
-
-
 
 def evalStatement(classMap, statement,
                   Gamma,
@@ -291,7 +269,8 @@ def evalStatement(classMap, statement,
         else: 
             # new object
             if (len(statement) == 4):
-                if (globalMu[Gamma[statement[2]]].val['type'][0] != 'separate' or globalMu[Gamma[statement[2]]].val['status'] != 'nil'):
+                objAddr =  globalMu[Gamma[statement[2]]].val
+                if (globalMu[objAddr]['type'][0] != 'separate' or globalMu[objAddr]['status'] != 'nil'):
                     print('seprate-type object can\'t be non-separate-newed.')
                     return 'error'
 
@@ -332,15 +311,16 @@ def evalStatement(classMap, statement,
             invert = not invert
 
         if len(statement) == 4:  # call method of object
+            objAddr = globalMu[Gamma[statement[1]]].val
 
-            if ('gamma' in globalMu[Gamma[statement[1]]].val.keys() ):
+            if ('gamma' in globalMu[objAddr].keys() ):
                 # call for local object
 
-                t          = getType(globalMu[Gamma[statement[1]]].val['type'])
+                t          = globalMu[objAddr]['type']
                 statements = classMap[t]['methods'][statement[2]]['statements']
                 funcArgs   = classMap[t]['methods'][statement[2]]['args']
                 passedArgs = statement[3]
-                localGamma = globalMu[Gamma[statement[1]]].val['gamma']
+                localGamma = globalMu[objAddr]['gamma']
 
                 for i in range(len(funcArgs)):
                     localGamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
@@ -354,16 +334,16 @@ def evalStatement(classMap, statement,
 
                 for i in range(len(funcArgs)):
                     localGamma.pop(funcArgs[i]['name'])
-                obj = globalMu[Gamma[statement[1]]]
+                obj = globalMu[objAddr]
                 obj.val['gamma'] = localGamma
-                globalMu[Gamma[statement[1]]] = obj
+                globalMu[objAddr] = obj
 
 
             else:
                 # call for remote object
                 callerAddr    = Gamma['this']
                 callOrUncall  = statement[0]
-                targetObjAddr = Gamma[statement[1]]
+                targetObjAddr = globalMu[Gamma[statement[1]]].val
                 methodName    = statement[2]
 
                 argsAddr      = []
@@ -372,7 +352,7 @@ def evalStatement(classMap, statement,
                     refcountUp(globalMu, varAddr)
                     argsAddr.append(varAddr)
 
-                q = globalMu[targetObjAddr].val['methodQ']
+                q = globalMu[targetObjAddr]['methodQ']
                 time.sleep(sys.float_info.min)
                 q.put([methodName, argsAddr, callOrUncall, callerAddr, None])
 
@@ -382,7 +362,7 @@ def evalStatement(classMap, statement,
             if (statement[0] == 'uncall'):
                 invert = not invert
 
-            thisType = globalMu[Gamma['this']]['type']
+            thisType = globalMu[globalMu[Gamma['this']].val]['type']
             statements = classMap[thisType]['methods'][statement[1]]['statements']
             for s in statements:
                 evalStatement(classMap, s, Gamma, globalMu, invert)
@@ -405,10 +385,6 @@ def evalStatement(classMap, statement,
         pass
 
     return 'success'
-
-
-
-
 
 def interpreter(classMap,
                 className,
@@ -438,7 +414,6 @@ def interpreter(classMap,
             request = q.get()
             lenReq = len(request)
 
-            print(request)
             if lenReq == 5:
 
                 methodName   = request[0]
@@ -447,7 +422,7 @@ def interpreter(classMap,
                 # if objAddr is 0, this intrprtr is running main func
                 objAddr      = request[3] 
 
-                procObjtype = globalMu[Gamma['this']].val['type']
+                procObjtype = globalMu[globalMu[Gamma['this']].val]['type']
                 statements = classMap[getType(procObjtype)]['methods'][methodName]['statements']
                 funcArgs = classMap[getType(procObjtype)]['methods'][methodName]['args']
 

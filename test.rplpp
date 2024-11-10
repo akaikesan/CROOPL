@@ -4,7 +4,7 @@ class Proc1
 
    method get(int i, int output)
        print ""
-       i += output
+       i <=> output
        print ""
 
 class Proc2
@@ -28,13 +28,15 @@ class Program
 
 
     private method main()
-        data1 ^=  1
-        data2 ^=  2 
+        data1 ^=  100
+        data2 ^=  200
         new separate Proc1 p
+        print ""
 
-        uncall   p::get(data1, data2)
+
         call     p::get(data1, data2)
         
+        // uncall   p::get(data1, data2)
 
     private method pr(int data, int output)
          print data

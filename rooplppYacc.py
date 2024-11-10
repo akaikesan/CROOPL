@@ -339,18 +339,23 @@ def yacc_test():
     parser = yacc.yacc()
     parser.parse(data)
 
-    # generate Process
+    # nil-init Program object in Mu.
     m = mp.Manager()
     globalMu = m.dict()
-    globalMu[0] = Value({'status': 'nil', 'type' : ['separate','Program']},0)
+    globalMu[0]  = Value(None)
+    objAddrValue = len(globalMu.keys())
+    globalMu[0]  = Value(objAddrValue)
+    globalMu[objAddrValue] = {'status': 'nil', 'type' : ['separate','Program']}
 
     
+    # generate Process
+    # new Program object.
     initProcess = makeSeparatedProcess(classMap, globalMu, 0)
 
     if initProcess == None:
         raise Exception("initProcess is None.")
 
-    q = globalMu[0].val['methodQ']
+    q = globalMu[globalMu[0].val]['methodQ']
 
 
     parent_conn, child_conn = mp.Pipe()
