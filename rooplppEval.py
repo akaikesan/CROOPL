@@ -524,7 +524,33 @@ def evalStatement(classMap,
 
     # LOCAL:0 type:1 id:2 EQ exp:3  statements:4 DELOCAL type:5 id:6 EQ exp:7
     elif (statement[0] == 'local'):
-        pass
+        if (statement[1][0] == 'separate'):  # local variable
+            pass
+        elif statement[1][0] == 'int':
+            l = len(globalMu.keys())
+            Gamma[statement[2]] = l
+            initValue = evalExp(Gamma, globalMu, statement[3], invert)
+            assert type(initValue) == int
+            globalMu[l] = Value(initValue)
+            stmts = []
+            if invert :
+                stmts = reversed(statement[4])
+            else:
+                stmts = statement[4]
+
+            for s in stmts:
+                evalStatement(classMap, s, Gamma, globalMu, invert)
+
+            assertValue = evalExp(Gamma, globalMu, statement[7], invert)
+            addr = Gamma[statement[6]]
+
+            assert  assertValue == globalMu[addr].val
+            assert statement[2] == statement[6]
+
+            Gamma.pop(statement[6])
+            globalMu.pop(addr)
+
+        
 
     return 'success'
 

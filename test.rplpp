@@ -14,10 +14,11 @@ class Proc2
 
    int data
 
-   method get(Proc1 i, Proc1 output)
-       print ""
-       output <=> i
-       print ""
+   method get()
+        local int id = 0 
+          id += 2
+          print ""
+        delocal int id = 2
 
 class Program
     int data1 
@@ -29,14 +30,10 @@ class Program
 
 
     private method main()
-        data1 ^=  100
-        data2 ^=  200
         new separate Proc2 p
-        new separate Proc1 p2
-        call p2::init()
-        new separate Proc1 p3
-        call     p::get(p2, p3)
-        uncall   p::get(p2, p3)
+        call p::get()
+        uncall p::get()
+        print ""
 
     private method pr(int data, int output)
          print data

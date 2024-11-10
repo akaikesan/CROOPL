@@ -85,9 +85,7 @@ class Program
           call list::appendCell(cell)
         delocal Cell cell = nil
         x += 1
-
       until x = listLength
-
     delocal int x = listLength
 
 
