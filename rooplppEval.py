@@ -16,6 +16,81 @@ class Value:
     def countDown(self):
         self.ref -= 1
 
+def statementInverter(statement, invert):
+    returnStatement = statement
+    if not invert:
+        return statement
+    else:
+        if (statement[0] == 'assignment'): 
+            return statement
+        elif (statement[0] == 'print'):
+            return statement
+        elif (statement[0] == 'skip'):
+            return statement
+        elif (statement[0] == 'new'):
+            # ['new', className, varName, 'separate']
+            # ['new', className, [varName]]
+            returnStatement[0] = 'delete'
+            return returnStatement
+
+        elif (statement[0] == 'delete'):
+            returnStatement[0] = 'new'
+            return returnStatement
+
+        elif (statement[0] == 'copy'):
+            #['copy', 'Cell', ['cell'], ['cellCopy']]
+            returnStatement[0] = 'uncopy'
+            return returnStatement
+
+        elif (statement[0] == 'call' or statement[0] == 'uncall'):
+            # ['call', 'tc', 'test', [args]]
+            # ['call', 'test', [args]]
+            returnStatement[0] = 'uncall'
+            return returnStatement
+
+        elif (statement[0] == 'if'):  # statement[1:4] = [e1, s1, s2, e2]
+            e1 = statement[1]
+            s1 = statement[2]
+            s2 = statement[3]
+            e2 = statement[4]
+            returnStatement[1] = e2
+            returnStatement[2] = s2
+            returnStatement[3] = s1
+            returnStatement[4] = e1
+
+            return returnStatement
+
+
+        elif (statement[0] == 'from'):  # statement[1:4] = [e1, s1, s2, e2]
+
+            e1 = statement[1]
+            s1 = statement[2]
+            s2 = statement[3]
+            e2 = statement[4]
+            returnStatement[1] = e2
+            returnStatement[2] = s2
+            returnStatement[3] = s1
+            returnStatement[4] = e1
+
+            return returnStatement
+        # LOCAL:0 type:1 id:2 EQ exp:3  statements:4 DELOCAL type:5 id:6 EQ exp:7
+        elif (statement[0] == 'local'):
+
+            t1 = statement[1]
+            id1 = statement[2]
+            exp1 = statement[3]
+            t2 = statement[5]
+            id2 = statement[6]
+            exp2 = statement[7]
+            returnStatement[1] = t2
+            returnStatement[2] = id2
+            returnStatement[3] = exp2
+            returnStatement[5] = t1
+            returnStatement[6] = id1
+            returnStatement[7] = exp1
+            return returnStatement
+
+
 def printMU(Gamma, MU):
     print(Gamma)
     for k, v in MU.items():
@@ -77,7 +152,6 @@ def makeLocalObj(classMap,
                  ):
     Gamma = {'this' : addr} 
     objAddr = globalMu[addr].val
-    print(objAddr)
     objType = globalMu[objAddr]['type']
 
     setNewedObj(classMap, objType, Gamma, globalMu, None)
@@ -128,18 +202,9 @@ def checkListIsDeletable(list):
         if i != 0:
             raise Exception("you can invert-new only 0-initialized array")
 
-def checkNil(object):
-    if isinstance(object, int):
-        return object
-    if len(object) == 0:
-        return {}
-    elif len(object) == 1:
-        if 'type' in object:
-            return {}
-    else:
-        return object
 
-def evalExp(Gamma, globalMu, exp):
+def evalExp(Gamma, globalMu, exp, invert):
+    # expression doesnt care about invert???
     if isinstance(exp, list):
         if len(exp) == 1:
             # [<int>] 
@@ -151,36 +216,37 @@ def evalExp(Gamma, globalMu, exp):
 
         else:
             if (exp[1] == '+'):
-                return evalExp(Gamma, globalMu, exp[0]) + evalExp(Gamma, globalMu, exp[2])
+                return evalExp(Gamma, globalMu, exp[0], invert) + evalExp(Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '-'):
-                return evalExp(Gamma, globalMu, exp[0]) - evalExp(Gamma, globalMu, exp[2])
+                return evalExp(Gamma, globalMu, exp[0], invert) - evalExp(Gamma, globalMu, exp[2], invert)
 
             elif (exp[1] == '/'):
-                return evalExp(Gamma, globalMu, exp[0]) / evalExp(Gamma, globalMu, exp[2])
+                return evalExp(Gamma, globalMu, exp[0], invert) / evalExp(Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '*'):
-                return evalExp(Gamma, globalMu, exp[0]) * evalExp(Gamma, globalMu, exp[2])
+                return evalExp(Gamma, globalMu, exp[0], invert) * evalExp(Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '='):
-                e1 = checkNil(evalExp(thisStore, exp[0]))
-                e2 = checkNil(evalExp(thisStore, exp[2]))
+                e1 = evalExp(Gamma, globalMu, exp[0], invert)
+                e2 = evalExp(Gamma, globalMu, exp[2], invert)
                 return e1 == e2
 
             elif (exp[1] == '!='):
-                e1 = checkNil(evalExp(thisStore, exp[0]))
-                e2 = checkNil(evalExp(thisStore, exp[2]))
+
+                e1 = evalExp(Gamma, globalMu, exp[0], invert)
+                e2 = evalExp(Gamma, globalMu, exp[2], invert)
                 return e1 != e2
 
             elif (exp[1] == '%'):
-                return evalExp(Gamma, globalMu, exp[0]) % evalExp(Gamma, globalMu, exp[2])
+                return evalExp(Gamma, globalMu, exp[0], invert) % evalExp(Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '&'):
-                return evalExp(Gamma, globalMu, exp[0]) and evalExp(Gamma, globalMu, exp[2])
+                return evalExp(Gamma, globalMu, exp[0], invert) and evalExp(Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '>'):
-                return evalExp(Gamma, globalMu, exp[0]) > evalExp(Gamma, globalMu, exp[2])
+                return evalExp(Gamma, globalMu, exp[0], invert) > evalExp(Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '<='):
-                return evalExp(Gamma, globalMu, exp[0]) <= evalExp(Gamma, globalMu, exp[2])
+                return evalExp(Gamma, globalMu, exp[0], invert) <= evalExp(Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '>='):
-                return evalExp(Gamma, globalMu, exp[0]) >= evalExp(Gamma, globalMu, exp[2])
+                return evalExp(Gamma, globalMu, exp[0], invert) >= evalExp(Gamma, globalMu, exp[2], invert)
             elif (exp[1] == '<'):
-                return evalExp(Gamma, globalMu, exp[0]) < evalExp(Gamma, globalMu, exp[2])
+                return evalExp(Gamma, globalMu, exp[0], invert) < evalExp(Gamma, globalMu, exp[2], invert)
 
     elif exp.isdecimal():
         # int (exp[0] is string. turn it to int Here.)
@@ -208,7 +274,8 @@ def getAssignmentResult(assignment, invert, left, right):
         elif assignment == '-=':
             return left - right
 
-def evalStatement(classMap, statement,
+def evalStatement(classMap, 
+                  rawstatement,
                   Gamma,
                   globalMu,
                   invert):
@@ -216,8 +283,7 @@ def evalStatement(classMap, statement,
     global ProcessRefCounter
     global ProcessObjName
 
-    
-
+    statement = statementInverter(rawstatement, invert)
 
     if statement is None:
         pass
@@ -245,9 +311,9 @@ def evalStatement(classMap, statement,
                 addr = Gamma[statement[2]]
                 left = globalMu[addr].val
             except:
-                print(statement[2], 'is not defined in class', '\'' + globalMu[Gamma['this']]['type'] + '\'')
+                print(statement[2], 'is not defined in class', '\'' + getType(globalMu[globalMu[Gamma['this']].val]['type']) + '\'')
 
-            right = evalExp(Gamma, globalMu, statement[3])
+            right = evalExp(Gamma, globalMu, statement[3], invert)
 
             result = getAssignmentResult(statement[1], invert, left, right)
 
@@ -327,13 +393,14 @@ def evalStatement(classMap, statement,
                 for i in range(len(funcArgs)):
                     localGamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
 
-                if(invert):
-                    for s in reversed(statements):
-                        evalStatement(classMap, s, localGamma, globalMu, invert)
+                stmts = []
+                if invert :
+                    stmts = reversed(statements)
                 else:
-                    for s in statements:
-                        evalStatement(classMap, s, localGamma, globalMu, invert)
+                    stmts = statements 
 
+                for s in stmts:
+                    evalStatement(classMap, s, localGamma, globalMu, invert)
                 for i in range(len(funcArgs)):
                     localGamma.pop(funcArgs[i]['name'])
                 obj = globalMu[objAddr]
@@ -364,10 +431,22 @@ def evalStatement(classMap, statement,
             if (statement[0] == 'uncall'):
                 invert = not invert
 
-            thisType = globalMu[globalMu[Gamma['this']].val]['type']
-            statements = classMap[thisType]['methods'][statement[1]]['statements']
-            for s in statements:
-                evalStatement(classMap, s, Gamma, globalMu, invert)
+
+            objAddr = globalMu[Gamma['this']].val
+            t          = getType(globalMu[objAddr]['type'])
+            statements = classMap[t]['methods'][statement[2]]['statements']
+            funcArgs   = classMap[t]['methods'][statement[2]]['args']
+            localGamma = globalMu[objAddr]['gamma']
+
+
+            stmts = []
+            if invert :
+                stmts = reversed(statements)
+            else:
+                stmts = statements 
+
+            for s in stmts:
+                evalStatement(classMap, s, localGamma, globalMu, invert)
 
 
         if (statement[0] == 'uncall'):
@@ -376,11 +455,72 @@ def evalStatement(classMap, statement,
 
 
     elif (statement[0] == 'if'):  # statement[1:4] = [e1, s1, s2, e2]
-        pass
+        e1Evaled = evalExp(Gamma, globalMu, statement[1], invert)
+        assert type(e1Evaled) == bool
+        if e1Evaled :# if-True
+            stmts = []
+            if invert :
+                stmts = reversed(statement[2])
+            else:
+                stmts = statement[2]
+
+            for s in stmts:
+                evalStatement(classMap, s, Gamma, globalMu, invert)
+
+            e2Evaled = evalExp(Gamma, globalMu, statement[4], invert)
+            assert e2Evaled == True 
+        else:       # if-False
+            stmts = []
+            if invert :
+                stmts = reversed(statement[3])
+            else:
+                stmts = statement[3]
+
+            for s in stmts:
+                evalStatement(classMap, s, Gamma, globalMu, invert)
+
+            e2Evaled = evalExp(Gamma, globalMu, statement[4], invert)
+            assert e2Evaled == False
+
+
+
+
 
 
     elif (statement[0] == 'from'):  # statement[1:4] = [e1, s1, s2, e2]
-        pass
+        assert evalExp(Gamma, globalMu, statement[1], invert) == True
+        stmts = []
+        if invert :
+            stmts = reversed(statement[1])
+        else:
+            stmts = statement[1]
+
+        for s in stmts:
+            evalStatement(classMap, s, Gamma, globalMu, invert)
+
+        while evalExp(Gamma, globalMu, statement[4], invert) == False:
+
+            if invert :
+                stmts = reversed(statement[3])
+            else:
+                stmts = statement[3]
+
+            for s in stmts:
+                evalStatement(classMap, s, Gamma, globalMu, invert)
+
+            assert evalExp(Gamma, globalMu, statement[1], invert) == False
+
+            if invert :
+                stmts = reversed(statement[1])
+            else:
+                stmts = statement[1]
+
+            for s in stmts:
+                evalStatement(classMap, s, Gamma, globalMu, invert)
+
+            
+
+
 
     # LOCAL:0 type:1 id:2 EQ exp:3  statements:4 DELOCAL type:5 id:6 EQ exp:7
     elif (statement[0] == 'local'):
@@ -440,11 +580,8 @@ def interpreter(classMap,
                     else:
                         q.put(request)
                         continue
-                    print('historyTop',historyTop)
 
                     if ((request[0])  != historyTop[0] or request[3] != historyTop[3]) or (historyTop[2] != 'call'):
-
-                        print('hello?')
                         q.put(request)
                         continue
                     # DO NOT invert 'invert' before REQUEUE!    
@@ -452,24 +589,22 @@ def interpreter(classMap,
 
                 
                 # Eval Statements
+                stmts = []
                 if invert :
-                    for s in reversed(statements):
-                        result = evalStatement(classMap, s, Gamma, globalMu, invert)
-                        if result == 'error':
-                            print('Error :', s, 'in', methodName)
-                            break
+                    stmts = reversed(statements)
                 else:
-                    for s in statements:
-                        result = evalStatement(classMap, s, Gamma, globalMu, invert)
-                        if result == 'error':
-                            print('Error :', s, 'in', methodName)
-                            break
+                    stmts = statements 
+
+                for s in stmts:
+                    result = evalStatement(classMap, s, Gamma, globalMu, invert)
+                    if result == 'error':
+                        print('Error :', s, 'in', methodName)
+                        break
 
                 # decrement reference Counter & remove args from Gamma
                 for i in range(len(passedArgs)):
                     Gamma.pop(funcArgs[i]['name'])
                     refcountDown(globalMu, passedArgs[i])
-
 
                 # historyStack after execution
                 if callORuncall == 'call':
