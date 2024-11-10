@@ -76,13 +76,15 @@ def makeLocalObj(classMap,
                  addr
                  ):
     Gamma = {'this' : addr} 
-    objType = globalMu[addr].val['type']
+    objAddr = globalMu[addr].val
+    print(objAddr)
+    objType = globalMu[objAddr]['type']
 
     setNewedObj(classMap, objType, Gamma, globalMu, None)
 
-    obj = globalMu[addr] 
-    obj.val['gamma'] = Gamma
-    globalMu[addr] = obj
+    obj = globalMu[objAddr] 
+    obj['gamma'] = Gamma
+    globalMu[objAddr] = obj
  
 def makeSeparatedProcess(classMap,
                          globalMu,
@@ -279,8 +281,8 @@ def evalStatement(classMap, statement,
                 ProcDict[Gamma[statement[2]]] = proc
 
             if (len(statement) == 3):
-
-                if (globalMu[Gamma[statement[2]]].val['type'][0] == 'separate' or globalMu[Gamma[statement[2]]].val['status'] != 'nil'):
+                objAddr =  globalMu[Gamma[statement[2]]].val
+                if (globalMu[objAddr]['type'][0] == 'separate' or globalMu[objAddr]['status'] != 'nil'):
                     print('Error : seprate-type object can\'t be non-separate-newed.')
                     return 'error'
                 makeLocalObj(classMap, globalMu, Gamma[statement[2]])
@@ -316,7 +318,7 @@ def evalStatement(classMap, statement,
             if ('gamma' in globalMu[objAddr].keys() ):
                 # call for local object
 
-                t          = globalMu[objAddr]['type']
+                t          = getType(globalMu[objAddr]['type'])
                 statements = classMap[t]['methods'][statement[2]]['statements']
                 funcArgs   = classMap[t]['methods'][statement[2]]['args']
                 passedArgs = statement[3]
@@ -335,7 +337,7 @@ def evalStatement(classMap, statement,
                 for i in range(len(funcArgs)):
                     localGamma.pop(funcArgs[i]['name'])
                 obj = globalMu[objAddr]
-                obj.val['gamma'] = localGamma
+                obj['gamma'] = localGamma
                 globalMu[objAddr] = obj
 
 

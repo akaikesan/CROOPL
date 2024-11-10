@@ -22,7 +22,7 @@ class Program
     int data1 
     int data2
     int data3 
-    separate Proc1 p
+    separate Proc1  p
     Proc1 p2
     Proc1 p3
 
@@ -31,12 +31,8 @@ class Program
         data1 ^=  100
         data2 ^=  200
         new separate Proc1 p
-        print ""
-
-
         call     p::get(data1, data2)
-        
-        // uncall   p::get(data1, data2)
+        uncall   p::get(data1, data2)
 
     private method pr(int data, int output)
          print data
