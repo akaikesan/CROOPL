@@ -3,6 +3,9 @@ class Proc1
    int data
 
 
+   method pr()
+      print memory
+
    method init()
       data += 22
 
@@ -24,17 +27,19 @@ class Program
     int data1 
     int data2
     int data3 
-    separate Proc2  p
+    separate Proc1  p
     separate Proc1 p2
-    separate Proc1 p3
+    Proc1 p3
 
 
     private method main()
+        new separate Proc1 p
+        call p::pr()
         new separate Proc1 p2
-        copy separate Proc1 p2 p3
         call p2::get(data1, data2)
         call p2::get(data1, data2)
-        print ""
+        new Proc1 p3
+        print memory
 
     private method pr(int data, int output)
          print data

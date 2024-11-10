@@ -65,7 +65,6 @@ class DoublyLinkedList
             call head::append(cell)
         else skip
         fi head != nil
-
         length += 1
 
 
@@ -73,14 +72,13 @@ class Program
     DoublyLinkedList list
     int listLength
 
-    method main()
+    method makeList()
         new DoublyLinkedList list
         listLength += 10
 
         local int x = 1
         from x = 1 do skip
         loop
-        
           local Cell cell = nil
             new Cell cell
             local Cell cellCopy = nil
@@ -90,9 +88,12 @@ class Program
             call cell::setData(x)
             call list::appendCell(cell)
           delocal Cell cell = nil
-
           x += 1
         until x = listLength
 
         call list::pr() 
         delocal int x = listLength
+
+    method main()
+        call makeList()
+        uncall makeList()

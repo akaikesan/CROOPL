@@ -336,6 +336,8 @@ def evalStatement(classMap,
         if statement[1][0] == '"' and statement[1][-1] == '"':
             print(statement[1][1:-1])
             #printMU(Gamma,globalMu)
+        elif (statement[1] == 'memory'):
+            printMU(Gamma, globalMu)
         else :
             print(evalExp(classMap, thisType, Gamma, globalMu, statement[1], invert))
 
@@ -368,6 +370,7 @@ def evalStatement(classMap,
                 objAddr =  globalMu[Gamma[statement[2]]].val
 
                 if (globalMu[objAddr]['type'][0] == 'separate' or globalMu[objAddr]['status'] != 'nil'):
+                    print(globalMu[objAddr])
                     print('Error : separate-type object can\'t be non-separate-newed.')
                     return 'error'
 
@@ -475,7 +478,9 @@ def evalStatement(classMap,
 
         elif len(statement) == 3:  # call method of local object
 
+
             if (statement[0] == 'uncall'):
+
                 invert = not invert
 
 
@@ -492,6 +497,7 @@ def evalStatement(classMap,
 
             stmts = []
             if invert :
+
                 stmts = reversed(statements)
             else:
                 stmts = statements 
@@ -598,6 +604,7 @@ def evalStatement(classMap,
 
             stmts = []
             if invert :
+                print('hey')
                 stmts = reversed(statement[4])
             else:
                 stmts = statement[4]
