@@ -340,20 +340,56 @@ def evalStatement(classMap,
     elif (statement[0] == 'assignment'): 
         # p[0] = ['assignment', p[2], p[1], p[3]]
         # ex) x += 2+1 -> ['assignment', +=, x, 2+1]
+        print(statement)
 
         if (statement[1] == '<=>'):
-            leftAddr = Gamma[statement[2]]
-            rightAddr = Gamma[statement[3]]
-            leftContent = globalMu[leftAddr]
-            rightContent = globalMu[rightAddr]
+            if (type(statement[2]) != list and type(statement[3]) != list):
+                leftAddr = Gamma[statement[2]]
+                rightAddr = Gamma[statement[3]]
+                leftContent = globalMu[leftAddr]
+                rightContent = globalMu[rightAddr]
 
-            leftContentVal = evalExp(Gamma, globalMu, statement[2], invert)
-            rightContentVal = evalExp(Gamma, globalMu, statement[3], invert)
-            leftContent.val = rightContentVal
-            rightContent.val = leftContentVal
+                leftContentVal = evalExp(Gamma, globalMu, statement[2], invert)
+                rightContentVal = evalExp(Gamma, globalMu, statement[3], invert)
+                leftContent.val = rightContentVal
+                rightContent.val = leftContentVal
 
-            globalMu[leftAddr] = leftContent
-            globalMu[rightAddr] = rightContent
+                globalMu[leftAddr] = leftContent
+                globalMu[rightAddr] = rightContent
+
+            if (type(statement[2]) == list and type(statement[3]) != list):
+
+                listAddr = globalMu[Gamma[statement[2][0]]].val
+                leftList = globalMu[listAddr]
+                listIndex= evalExp(Gamma, globalMu, statement[2][1], invert)
+                leftContentVal = leftList[listIndex].val
+
+                rightAddr = Gamma[statement[3]]
+                rightContentVal = evalExp(Gamma, globalMu, statement[3], invert)
+
+                leftList[listIndex].val = rightContentVal
+                globalMu[listAddr] = leftList
+
+                rightContent = globalMu[rightAddr]
+                rightContent.val = leftContentVal
+                globalMu[rightAddr] = rightContent
+
+            if (type(statement[2]) != list and type(statement[3]) == list):
+
+                listAddr = globalMu[Gamma[statement[3][0]]].val
+                rightList = globalMu[listAddr]
+                listIndex= evalExp(Gamma, globalMu, statement[3][1], invert)
+                rightContentVal = rightList[listIndex].val
+
+                leftAddr = Gamma[statement[2]]
+                leftContentVal = evalExp(Gamma, globalMu, statement[2], invert)
+
+                rightList[listIndex].val = leftContentVal
+                globalMu[listAddr] = rightList
+
+                leftContent = globalMu[leftAddr]
+                leftContent.val = rightContentVal
+                globalMu[leftAddr] = leftContent
 
         else:
             # readMu
