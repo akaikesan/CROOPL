@@ -29,11 +29,11 @@ class Cell
 
     method append(Cell cell)
         if right = nil & cell != nil then
-            right <=> cell
+          right <=> cell
 
           local Cell selfCopy = nil
-          copy Cell self selfCopy
-          call right::setLeft(selfCopy)
+            copy Cell self selfCopy
+            call right::setLeft(selfCopy)
           delocal Cell selfCopy = nil
 
           local int cellIndex = index + 1
@@ -92,6 +92,7 @@ class Program
         until x = listLength
 
         call list::pr() 
+        print "hello"
         delocal int x = listLength
 
     method main()

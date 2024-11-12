@@ -16,8 +16,18 @@ class Value:
     def countDown(self):
         self.ref -= 1
 
+def runBlockStatement(classMap, block, Gamma, globalMu, invert):
+        stmts = []
+        if invert :
+            stmts = reversed(block)
+        else:
+            stmts = block 
+        for s in stmts:
+            evalStatement(classMap, s, Gamma, globalMu, invert)
+
+
 def statementInverter(statement, invert):
-    returnStatement = statement
+    returnStatement = statement[:]
     if not invert:
         return statement
     else:
@@ -47,10 +57,15 @@ def statementInverter(statement, invert):
             returnStatement[0] = 'copy'
             return returnStatement
 
-        elif (statement[0] == 'call' or statement[0] == 'uncall'):
+        elif (statement[0] == 'call') :
             # ['call', 'tc', 'test', [args]]
             # ['call', 'test', [args]]
             returnStatement[0] = 'uncall'
+            return returnStatement
+        elif (statement[0] == 'uncall') :
+            # ['call', 'tc', 'test', [args]]
+            # ['call', 'test', [args]]
+            returnStatement[0] = 'call'
             return returnStatement
 
         elif (statement[0] == 'if'):  # statement[1:4] = [e1, s1, s2, e2]
@@ -59,8 +74,8 @@ def statementInverter(statement, invert):
             s2 = statement[3]
             e2 = statement[4]
             returnStatement[1] = e2
-            returnStatement[2] = s2
-            returnStatement[3] = s1
+            returnStatement[2] = s1
+            returnStatement[3] = s2
             returnStatement[4] = e1
 
             return returnStatement
@@ -73,8 +88,8 @@ def statementInverter(statement, invert):
             s2 = statement[3]
             e2 = statement[4]
             returnStatement[1] = e2
-            returnStatement[2] = s2
-            returnStatement[3] = s1
+            returnStatement[2] = s1
+            returnStatement[3] = s2
             returnStatement[4] = e1
 
             return returnStatement
@@ -292,6 +307,11 @@ def evalStatement(classMap,
     global ProcessObjName
 
     statement = statementInverter(rawstatement, invert)
+    if (rawstatement[0] == 'if'):
+        print(True)
+        print('result')
+        print(rawstatement)
+        print(statement)
 
     if statement is None:
         pass
@@ -370,7 +390,6 @@ def evalStatement(classMap,
                 objAddr =  globalMu[Gamma[statement[2]]].val
 
                 if (globalMu[objAddr]['type'][0] == 'separate' or globalMu[objAddr]['status'] != 'nil'):
-                    print(globalMu[objAddr])
                     print('Error : separate-type object can\'t be non-separate-newed.')
                     return 'error'
 
@@ -415,9 +434,6 @@ def evalStatement(classMap,
         # ['call', 'tc', 'test', [args]]
         # ['call', 'test', [args]]
 
-        if (statement[0] == 'uncall'):
-            invert = not invert
-
         if len(statement) == 4:  # call method of object
             objAddr = globalMu[Gamma[statement[1]]].val
 
@@ -441,14 +457,16 @@ def evalStatement(classMap,
                 for i in range(len(funcArgs)):
                     localGamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
 
-                stmts = []
-                if invert :
-                    stmts = reversed(statements)
-                else:
-                    stmts = statements 
+                localInvert = invert
+                if (statement[0] == 'uncall' and invert):
+                    pass
+                elif (statement[0] == 'uncall' and not invert):
+                    localInvert = not invert
 
-                for s in stmts:
-                    evalStatement(classMap, s, localGamma, globalMu, invert)
+                runBlockStatement(classMap,
+                                  statements,
+                                  localGamma,
+                                  globalMu, localInvert)
 
                 for i in range(len(funcArgs)):
                     localGamma.pop(funcArgs[i]['name'])
@@ -477,13 +495,6 @@ def evalStatement(classMap,
 
 
         elif len(statement) == 3:  # call method of local object
-
-
-            if (statement[0] == 'uncall'):
-
-                invert = not invert
-
-
             
             objAddr = globalMu[Gamma['this']].val
             t          = getType(globalMu[objAddr]['type'])
@@ -495,22 +506,22 @@ def evalStatement(classMap,
                 Gamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
 
 
-            stmts = []
-            if invert :
+            localInvert = invert
+            if (statement[0] == 'uncall' and invert):
+                pass
+            elif (statement[0] == 'uncall' and not invert):
+                localInvert = not invert
 
-                stmts = reversed(statements)
-            else:
-                stmts = statements 
 
-            for s in stmts:
-                evalStatement(classMap, s, Gamma, globalMu, invert)
+            runBlockStatement(classMap,
+                              statements,
+                              Gamma,
+                              globalMu, localInvert)
 
             for i in range(len(funcArgs)):
                 Gamma.pop(funcArgs[i]['name'])
 
 
-        if (statement[0] == 'uncall'):
-            invert = not invert
             
 
 
@@ -519,28 +530,23 @@ def evalStatement(classMap,
         e1Evaled = evalExp(classMap,thisType,Gamma, globalMu, statement[1], invert)
         assert type(e1Evaled) == bool
         if e1Evaled :# if-True
-            stmts = []
-            if invert :
-                stmts = reversed(statement[2])
-            else:
-                stmts = statement[2]
-
-            for s in stmts:
-                evalStatement(classMap, s, Gamma, globalMu, invert)
+            runBlockStatement(classMap,
+                              statement[2],
+                              Gamma,
+                              globalMu, invert)
 
             e2Evaled = evalExp(classMap,thisType,Gamma, globalMu, statement[4], invert)
             assert e2Evaled == True 
         else:       # if-False
-            stmts = []
-            if invert :
-                stmts = reversed(statement[3])
-            else:
-                stmts = statement[3]
-
-            for s in stmts:
-                evalStatement(classMap, s, Gamma, globalMu, invert)
+            runBlockStatement(classMap,
+                              statement[3],
+                              Gamma,
+                              globalMu, invert)
 
             e2Evaled = evalExp(classMap,thisType,Gamma, globalMu, statement[4], invert)
+            print(invert)
+            print(statement)
+            print(statement[4])
             assert e2Evaled == False
 
 
@@ -549,44 +555,40 @@ def evalStatement(classMap,
 
 
     elif (statement[0] == 'from'):  # statement[1:4] = [e1, s1, s2, e2]
+        #['from', e1, s1, s2, e2]
 
         thisType = globalMu[globalMu[Gamma['this']].val]['type']
         assert evalExp(classMap,thisType,Gamma, globalMu, statement[1], invert) == True
-        stmts = []
-        if invert :
-            stmts = reversed(statement[1])
-        else:
-            stmts = statement[1]
 
-        for s in stmts:
-            evalStatement(classMap, s, Gamma, globalMu, invert)
+        runBlockStatement(classMap,
+                          statement[2],
+                          Gamma,
+                          globalMu, invert)
 
         while evalExp(classMap,thisType,Gamma, globalMu, statement[4], invert) == False:
 
-            if invert :
-                stmts = reversed(statement[3])
-            else:
-                stmts = statement[3]
+            runBlockStatement(classMap,
+                              statement[3],
+                              Gamma,
+                              globalMu, invert)
 
-            for s in stmts:
-                evalStatement(classMap, s, Gamma, globalMu, invert)
+            assert evalExp(classMap,
+                           thisType,
+                           Gamma,
+                           globalMu,
+                           statement[1], invert) == False
 
-            assert evalExp(classMap,thisType,Gamma, globalMu, statement[1], invert) == False
-
-            if invert :
-                stmts = reversed(statement[1])
-            else:
-                stmts = statement[1]
-
-            for s in stmts:
-                evalStatement(classMap, s, Gamma, globalMu, invert)
-
+            runBlockStatement(classMap,
+                              statement[2],
+                              Gamma,
+                              globalMu, invert)
             
 
 
 
     # LOCAL:0 type:1 id:2 EQ exp:3  statements:4 DELOCAL type:5 id:6 EQ exp:7
     elif (statement[0] == 'local'):
+
 
         thisType = globalMu[globalMu[Gamma['this']].val]['type']
         if (statement[1][0] == 'separate'):
@@ -602,16 +604,7 @@ def evalStatement(classMap,
             globalMu[l] = Value(objAddr, 'Address')
             globalMu[objAddr] = {'type': statement[1], 'status': 'nil' }
 
-            stmts = []
-            if invert :
-                print('hey')
-                stmts = reversed(statement[4])
-            else:
-                stmts = statement[4]
-
-            for s in stmts:
-                evalStatement(classMap, s, Gamma, globalMu, invert)
-
+            runBlockStatement(classMap, statement[4], Gamma, globalMu, invert)
             assertValue = evalExp(classMap,thisType,Gamma, globalMu, statement[7], invert)
             addr = Gamma[statement[6]]
 
@@ -630,15 +623,9 @@ def evalStatement(classMap,
             initValue = evalExp(classMap,thisType,Gamma, globalMu, statement[3], invert)
             assert type(initValue) == int
             globalMu[l] = Value(initValue, 'int')
-            stmts = []
-            if invert :
-                stmts = reversed(statement[4])
-            else:
-                stmts = statement[4]
 
-            for s in stmts:
-                evalStatement(classMap, s, Gamma, globalMu, invert)
-
+            runBlockStatement(classMap, statement[4], Gamma, globalMu, invert)
+            assertValue = evalExp(classMap,thisType,Gamma, globalMu, statement[7], invert)
             assertValue = evalExp(classMap,thisType,Gamma, globalMu, statement[7], invert)
             addr = Gamma[statement[6]]
 
@@ -675,6 +662,7 @@ def evalStatement(classMap,
 
             assertValue = evalExp(classMap,thisType,Gamma, globalMu, statement[7], invert)
             addr = Gamma[statement[6]]
+            print(statement)
 
             assert  assertValue == 'nil'
             assert statement[2] == statement[6]
@@ -695,7 +683,6 @@ def interpreter(classMap,
                 Gamma,
                 globalMu):
 
-    invert = False
     # print("interpreter of " + className + ":"+objName + " start")
 
     global m
@@ -723,7 +710,7 @@ def interpreter(classMap,
                 passedArgs   = request[1]
                 callORuncall = request[2]
                 # if objAddr is 0, this intrprtr is running main func
-                objAddr      = request[3] 
+                callerObjAddr      = request[3] 
 
                 procObjtype = globalMu[globalMu[Gamma['this']].val]['type']
                 statements = classMap[getType(procObjtype)]['methods'][methodName]['statements']
@@ -734,6 +721,7 @@ def interpreter(classMap,
                     for i in range(len(funcArgs)):
                         Gamma[funcArgs[i]['name']] = passedArgs[i]
 
+
                 # check correspondency with historyTop
                 if callORuncall == 'uncall':
                     if historyStack.qsize() != 0:
@@ -742,25 +730,18 @@ def interpreter(classMap,
                         q.put(request)
                         continue
 
-                    if ((request[0])  != historyTop[0] or request[3] != historyTop[3]) or (historyTop[2] != 'call'):
+                    if ((request[0])  != historyTop[0] or callerObjAddr != historyTop[3]) or ((historyTop[2] != 'call') or (True)):
                         q.put(request)
                         continue
                     # DO NOT invert 'invert' before REQUEUE!    
-                    invert = not invert
 
                 
                 # Eval Statements
-                stmts = []
-                if invert :
-                    stmts = reversed(statements)
-                else:
-                    stmts = statements 
+                initInvert = False
+                if callORuncall == 'uncall' :
+                    initInvert = True
 
-                for s in stmts:
-                    result = evalStatement(classMap, s, Gamma, globalMu, invert)
-                    if result == 'error':
-                        print('Error :', s, 'in', methodName)
-                        break
+                runBlockStatement(classMap, statements, Gamma, globalMu, initInvert)
 
                 # decrement reference Counter & remove args from Gamma
                 for i in range(len(passedArgs)):
@@ -771,7 +752,6 @@ def interpreter(classMap,
                 if callORuncall == 'call':
                     historyStack.put(request)
                 elif callORuncall == 'uncall':
-                    invert = not invert
                     historyStack.get()
 
                 
