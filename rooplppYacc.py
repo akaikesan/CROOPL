@@ -71,15 +71,18 @@ def p_type(p):
     elif len(p) == 3:
         p[0] = [p[1],p[2]]
     elif len(p) == 4:
-        p[0] = [p[1]]
+        if p[1] == "separate":
+            p[0] = [p[1], p[2], p[3]]
+        else:
+            p[0] = ['list', p[1]]
 
 
 def p_arrayType(p):
     '''
-    arrayType : type LBRA exp RBRA
+    arrayType : ID LBRA exp RBRA
     | INT LBRA exp RBRA
     '''
-    p[0] = [[p[1], p[3]]]
+    p[0] = [p[1], p[3]]
 
 
 def p_methods(p):
@@ -165,7 +168,7 @@ def p_y(p):
     if len(p) == 2:
         p[0] = p[1]
     else:
-        p[0] = [[p[1], p[3]]]
+        p[0] = [p[1], p[3]]
 
 def p_id(p):
     '''
@@ -207,11 +210,11 @@ def p_anyIds1(p):
 def p_statement(p):
     '''
     statement : y modOp exp
-    | NEW arrayType id
-    | DELETE arrayType id
+    | NEW arrayType ID
     | NEW SEPARATE ID y
-    | DELETE SEPARATE ID y
     | NEW ID y
+    | DELETE arrayType ID
+    | DELETE SEPARATE ID y
     | DELETE ID y
     | SKIP
     | PRINT exp

@@ -5,49 +5,49 @@ class Program
     separate Consumer c1
     separate Consumer c2
     separate Buffer b
+    int i
 
     method main()
-        new separate Producer p1
-        new separate Producer p2
-        new separate Consumer c1
-        new separate Consumer c2
+        //new separate Producer p1
+        //new separate Producer p2
+        //new separate Consumer c1
+        //new separate Consumer c2
         new separate Buffer b
 
 
-        call b::init()
-
+        call b::init(i)
         // Produce|consume start 
 
 
-        uncall p1::produce(b)
-        uncall p2::produce(b)
+        //uncall p1::produce(b)
+        //uncall p2::produce(b)
 
-        call c1::consume(b)
-        call c2::consume(b)
+        //call c1::consume(b)
+        //call c2::consume(b)
 
-        call p1::produce(b)
-        call p2::produce(b)
+        //call p1::produce(b)
+        //call p2::produce(b)
 
         // Produce|consume end 
         // uncalling produce|consume start
 
 
-        uncall c1::consume(b)
-        uncall c2::consume(b)
+        //uncall c1::consume(b)
+        //uncall c2::consume(b)
 
 
         // uncalling produce|consume end
 
 
-        delete separate Producer p1
-        delete separate Producer p2
-        delete separate Consumer c1
-        delete separate Consumer c2
+        //delete separate Producer p1
+        //delete separate Producer p2
+        //delete separate Consumer c1
+        //delete separate Consumer c2
 
-        print " "
-        uncall b::init()
-        print " "
-        delete separate Buffer b
+        //print " "
+        //uncall b::init()
+        //print " "
+        //delete separate Buffer b
 
 
 class Producer
@@ -72,12 +72,22 @@ class Consumer
 
 class Buffer
     int[] buffer
+    Consumer[] family
     int length
     int MAX
 
-    method init()
+    method init(int i)
         MAX += 2
         new int[MAX] buffer
+
+
+        new Consumer[MAX] family
+        MAX <=> length
+        print memory
+        new Consumer family[1]
+        buffer[length]  <=> i
+        print memory
+
 
     method put(int i)
         require length < MAX

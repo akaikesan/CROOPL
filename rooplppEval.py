@@ -4,6 +4,9 @@ import sys
 import queue
 
 
+## type is always List. 
+
+
 class Value:
     def __init__(self, v, t):
         self.val = v
@@ -127,7 +130,12 @@ def printMU(Gamma, MU):
         if type(v) == Value :
             print(k, ':', '(', v.val, ',', v.ref, ',', v._type, ')')
         elif type(v) == dict:
-            print(k, ':', v)
+            if not 'status' in v.keys():
+                print(k, ':', 'list')
+                for k in v.keys():
+                    print('   ', k, ': (', v[k].val,',', v[k].ref,',', v[k]._type, ')')
+            else:
+                print(k, ':', v)
         else:
             print('unexpected Type')
 
@@ -157,11 +165,15 @@ def setNewedObj(classMap, objType, Gamma, globalMu, q):
     for f in fields.keys():
         l = max(globalMu.keys()) + 1
         Gamma[f] = l
+
         if fields[f][0] == 'int':
             v = Value(0, 'int')
             globalMu[l] = v
         elif fields[f][0] == 'list':
-            pass
+            globalMu[l] = Value(None, 'Address')
+            objAddrValue = max(globalMu.keys()) + 1
+            globalMu[l] = Value(objAddrValue, 'Address')
+            globalMu[objAddrValue] = {'type' : fields[f], 'status': 'nil'}
         else:
             globalMu[l] = Value(None, 'Address')
             objAddrValue = max(globalMu.keys()) + 1
@@ -335,8 +347,8 @@ def evalStatement(classMap,
             leftContent = globalMu[leftAddr]
             rightContent = globalMu[rightAddr]
 
-            leftContentVal = leftContent.val
-            rightContentVal = rightContent.val
+            leftContentVal = evalExp(Gamma, globalMu, statement[2], invert)
+            rightContentVal = evalExp(Gamma, globalMu, statement[3], invert)
             leftContent.val = rightContentVal
             rightContent.val = leftContentVal
 
@@ -377,12 +389,42 @@ def evalStatement(classMap,
         # ['new', className, varName]
 
         if isinstance(statement[1], list): 
-            pass
+            varAddr = Gamma[statement[2]]
+            objAddr = globalMu[varAddr].val
+            size = evalExp(Gamma, globalMu, statement[1][1], invert)
+            assert type(size) == int
+
+            if statement[1][0] == 'int':
+                d = {}
+                for i in range(size):
+                    d[i] = Value(0,'int')
+                globalMu[objAddr] = d
+                print(globalMu[objAddr])
+            else :
+
+                d = {}
+                for i in range(size):
+                    objPointerAddress = max(globalMu.keys()) + 1
+                    d[i] = Value(objPointerAddress, 'Address')
+                    globalMu[objPointerAddress] = Value(None,'Address')
+                    objAddress = max(globalMu.keys()) + 1
+                    globalMu[objPointerAddress] = Value(objAddress,'Address')
+                    globalMu[objAddress] = {'type' : [statement[1][0]], 'status': 'nil'}
+
+                globalMu[objAddr] = d
+                printMU(Gamma, globalMu)
+
         else: 
             # new object
             
             if (len(statement) == 4):
-                objAddr =  globalMu[Gamma[statement[2]]].val
+                if isinstance(statement[2], list):
+                    objPointerAddr = globalMu[globalMu[Gamma[statement[2][0]]].val][statement[2][1]].val
+                    objAddr = globalMu[objPointerAddr].val
+                else:
+                    objPointerAddr = Gamma[statement[2]]
+                    objAddr =  globalMu[Gamma[statement[2]]].val
+
                 if (globalMu[objAddr]['type'][0] != 'separate' or globalMu[objAddr]['status'] != 'nil'):
                     print('separate-type object can\'t be non-separate-newed.')
                     return 'error'
@@ -390,18 +432,26 @@ def evalStatement(classMap,
                     print('type mismatch',globalMu[objAddr]['type'][1], statement[1] )
                     return 'error'
 
-                proc = makeSeparatedProcess(classMap, globalMu,  Gamma[statement[2]])
+
+
+                proc = makeSeparatedProcess(classMap, globalMu,  objPointerAddr)
                 global ProcDict
                 ProcDict[Gamma[statement[2]]] = proc
 
             if (len(statement) == 3):
-                objAddr =  globalMu[Gamma[statement[2]]].val
+
+                if isinstance(statement[2], list):
+                    objPointerAddr = globalMu[globalMu[Gamma[statement[2][0]]].val][int(statement[2][1])].val
+                    objAddr = globalMu[objPointerAddr].val
+                else:
+                    objPointerAddr = Gamma[statement[2]]
+                    objAddr =  globalMu[Gamma[statement[2]]].val
 
                 if (globalMu[objAddr]['type'][0] == 'separate' or globalMu[objAddr]['status'] != 'nil'):
                     print('Error : separate-type object can\'t be non-separate-newed.')
                     return 'error'
 
-                makeLocalObj(classMap, globalMu, Gamma[statement[2]])
+                makeLocalObj(classMap, globalMu, objPointerAddr)
                 
                 
 
