@@ -19,6 +19,9 @@ class Program
         call b::init()
         //Produce|consume start 
 
+        call p1::generate()
+        call p2::generate()
+
 
         uncall p1::produce(b) // put consume
         uncall p2::produce(b) // put consume
@@ -28,10 +31,8 @@ class Program
 
         call p1::produce(b)// put produce
         call p2::produce(b)// put produce
-         //Produce consume end 
+        //Produce consume end 
         // uncalling produce|consume start
-
-
         uncall c1::consume(b)// put produce
         uncall c2::consume(b)// put produce
 
@@ -51,8 +52,10 @@ class Program
 class Producer
   int data
 
+  method generate()
+      data ^= 3
+
   method produce(Buffer buf)
-    data ^= 3
     call buf::put(data)
 
 
@@ -61,7 +64,6 @@ class Consumer
 
   method consume(Buffer  buf)
     call buf::get(data)
-
 
 class Buffer
     int[] buffer
@@ -75,15 +77,23 @@ class Buffer
 
     method put(int i)
         require length < MAX
+          print i
+          print buffer
           buffer[length]  <=> i
           print "produce"
+          print buffer
           length += 1
+          print i
         ensure length > 0
 
     method get(int i)
         require length > 0
           length -= 1
-          buffer[length] <=> i
+          print i  
+          print buffer
+          buffer[length]  <=> i
           print "consume"
+          print buffer
+          print i
         ensure length < MAX
 

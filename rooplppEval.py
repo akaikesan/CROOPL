@@ -307,9 +307,8 @@ def evalExp(Gamma, globalMu, exp):
         if t == 'int' :
             return content.val
         elif t == 'Address' and globalMu[content.val]['type'] == 'list':
-            for k,v in globalMu[content.val].items():
-                if (k != 'type'):
-                    print(k, ':', v.val, ',',  v.ref, ',', v._type)
+            return content.val
+
         else:
             if globalMu[content.val]['status'] == 'nil':
                 return 'nil'
@@ -354,7 +353,7 @@ def evalStatement(classMap,
                 leftContent = globalMu[leftAddr]
                 rightContent = globalMu[rightAddr]
 
-                leftContentVal = evalExp(Gamma, globalMu, statement[2], invert)
+                leftContentVal = evalExp(Gamma, globalMu, statement[2])
                 rightContentVal = evalExp(Gamma, globalMu, statement[3])
                 leftContent.val = rightContentVal
                 rightContent.val = leftContentVal
@@ -363,6 +362,7 @@ def evalStatement(classMap,
                 globalMu[rightAddr] = rightContent
 
             if (type(statement[2]) == list and type(statement[3]) != list):
+
 
                 listAddr = globalMu[Gamma[statement[2][0]]].val
                 leftList = globalMu[listAddr]
@@ -413,14 +413,27 @@ def evalStatement(classMap,
             writeValToMu(Gamma, globalMu, statement[2], result)
 
     elif (statement[0] == 'print'):
+        if invert:
+            invertflag = '-1:'
+        else:
+            invertflag = ' '
+        
 
         if statement[1][0] == '"' and statement[1][-1] == '"':
-            print(statement[1][1:-1])
-            #printMU(Gamma,globalMu)
+            print(invertflag, statement[1][1:-1])
         elif (statement[1] == 'memory'):
             printMU(Gamma, globalMu)
         else :
-            print(evalExp(Gamma, globalMu, statement[1]))
+            content = globalMu[Gamma[statement[1]]]
+            t = content._type
+            if t == 'Address' and globalMu[content.val]['type'] == 'list':
+                print("[")
+                for k,v in globalMu[content.val].items():
+                    if (k != 'type'):
+                        print(k, ':', v.val, ',',  v.ref, ',', v._type)
+                print("]")
+            if t == 'int':
+                print(evalExp(Gamma, globalMu, statement[1]))
 
     elif (statement[0] == 'skip'):
         pass
@@ -836,6 +849,7 @@ def interpreter(classMap,
 
 
     while(True):
+        '''
         if className[1] == "Buffer":
 
             print("histry size:", historyStack.qsize())
@@ -857,6 +871,7 @@ def interpreter(classMap,
                     print(top)
                 for i in range(len(tmp)):
                     q.put(tmp[i])
+        '''
             
 
 
@@ -884,12 +899,13 @@ def interpreter(classMap,
 
                     e1Evaled = evalExp(Gamma, globalMu, exp)
                     if e1Evaled == False:
-                        print("require failed")
+                        #print("require failed")
                         q.put(request)
                         continue
                     else:
-                        print('require/ensure passed')
-                        print(request)
+                        #print('require/ensure passed')
+                        #print(request)
+                        pass
 
                 statements = classMap[getType(procObjtype)]['methods'][methodName]['statements']
                 funcArgs = classMap[getType(procObjtype)]['methods'][methodName]['args']
@@ -906,17 +922,18 @@ def interpreter(classMap,
                         historyTop = historyStack.get()
 
                     else:
-                        print('history unmatched')
+                        #print('history unmatched')
                         q.put(request)
                         continue
 
                     if (request[0]  == historyTop[0] and callerObjAddr == historyTop[3]) and ((historyTop[2] == 'call') and True):
 
-                        print("HT:",historyTop)
-                        print("HT MATCH:",request)
+                        #print("HT:",historyTop)
+                        #print("HT MATCH:",request)
+                        pass
                     else:
-                        print("HT :",historyTop)
-                        print("HT ReQ:",request)
+                        #print("HT :",historyTop)
+                        #print("HT ReQ:",request)
                         q.put(request)
                         historyStack.put(historyTop)
                         continue
