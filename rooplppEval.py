@@ -133,6 +133,8 @@ def printMU(Gamma, MU):
             if not 'status' in v.keys():
                 print(k, ':', 'list')
                 for k in v.keys():
+                    if k == 'type':
+                        continue
                     print('   ', k, ': (', v[k].val,',', v[k].ref,',', v[k]._type, ')')
             else:
                 print(k, ':', v)
@@ -834,6 +836,29 @@ def interpreter(classMap,
 
 
     while(True):
+        if className[1] == "Buffer":
+
+            print("histry size:", historyStack.qsize())
+            tmp = []
+            if historyStack.qsize() > 0:
+                for i in range(historyStack.qsize()):
+                    top = historyStack.get()
+                    tmp.append(top)
+                    print(top)
+                for i in range(len(tmp)):
+                    historyStack.put(tmp[len(tmp) - 1 - i])
+
+            if q.qsize() > 0:
+                tmp = []
+                print("methodQ size:", q.qsize())
+                for i in range(q.qsize()):
+                    top = q.get()
+                    tmp.append(top)
+                    print(top)
+                for i in range(len(tmp)):
+                    q.put(tmp[i])
+            
+
 
         if q.qsize() != 0:
             request = q.get()
@@ -855,10 +880,16 @@ def interpreter(classMap,
                         assert callORuncall == 'uncall'
                         exp = classMap[getType(procObjtype)]['methods'][methodName]['ensure']
 
+                    #printMU(Gamma,globalMu)
+
                     e1Evaled = evalExp(Gamma, globalMu, exp)
                     if e1Evaled == False:
+                        print("require failed")
                         q.put(request)
                         continue
+                    else:
+                        print('require/ensure passed')
+                        print(request)
 
                 statements = classMap[getType(procObjtype)]['methods'][methodName]['statements']
                 funcArgs = classMap[getType(procObjtype)]['methods'][methodName]['args']
@@ -875,10 +906,11 @@ def interpreter(classMap,
                         historyTop = historyStack.get()
 
                     else:
+                        print('history unmatched')
                         q.put(request)
                         continue
 
-                    if ((request[0])  == historyTop[0] and callerObjAddr == historyTop[3]) and ((historyTop[2] == 'call') and True):
+                    if (request[0]  == historyTop[0] and callerObjAddr == historyTop[3]) and ((historyTop[2] == 'call') and True):
 
                         print("HT:",historyTop)
                         print("HT MATCH:",request)
@@ -886,6 +918,7 @@ def interpreter(classMap,
                         print("HT :",historyTop)
                         print("HT ReQ:",request)
                         q.put(request)
+                        historyStack.put(historyTop)
                         continue
                 
                 # Eval Statements
@@ -900,9 +933,6 @@ def interpreter(classMap,
                     Gamma.pop(funcArgs[i]['name'])
                     refcountDown(globalMu, passedArgs[i])
 
-                if result == "reQ":
-                    q.put(request)
-                    continue
 
                 # historyStack after execution
                 if callORuncall == 'call':

@@ -20,20 +20,20 @@ class Program
         //Produce|consume start 
 
 
-        uncall p1::produce(b)
-        uncall p2::produce(b)
+        uncall p1::produce(b) // put consume
+        uncall p2::produce(b) // put consume
 
-        call c1::consume(b)
-        call c2::consume(b)
+        call c1::consume(b)// get consume
+        call c2::consume(b)// get consume
 
-        call p1::produce(b)
-        call p2::produce(b)
+        call p1::produce(b)// put produce
+        call p2::produce(b)// put produce
          //Produce consume end 
         // uncalling produce|consume start
 
 
-        uncall c1::consume(b)
-        uncall c2::consume(b)
+        uncall c1::consume(b)// put produce
+        uncall c2::consume(b)// put produce
 
 
         // uncalling produce|consume end
@@ -44,7 +44,7 @@ class Program
         //delete separate Consumer c1
         //delete separate Consumer c2
 
-        uncall b::init()
+        //uncall b::init()
         //delete separate Buffer b
 
 
@@ -65,7 +65,6 @@ class Consumer
 
 class Buffer
     int[] buffer
-    Consumer[] family
     int length
     int MAX
 
