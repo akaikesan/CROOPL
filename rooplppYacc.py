@@ -92,13 +92,7 @@ def p_methods(p):
     '''
     if len(p) == 3:
         methods = p[1]
-        methods[p[2]["methodName"]] = {
-                "statements":p[2]["statements"],
-                "args": p[2]["args"]
-                }
-        if "require" in p[2]:
-            methods[p[2]["methodName"]]["require"] = p[2]["require"]
-            methods[p[2]["methodName"]]["ensure"] = p[2]["ensure"]
+        methods[p[2]["methodName"]] = p[2]
         p[0] = methods
     else:
         p[0] = {}
@@ -106,9 +100,9 @@ def p_methods(p):
 
 def p_method(p):
     '''
+    method : METHOD ID LPAREN varDecCommas RPAREN REQUIRE exp statements ENSURE exp
     method : METHOD ID LPAREN varDecCommas RPAREN statements
     method : PRIVATE METHOD ID LPAREN varDecCommas RPAREN statements
-    method : METHOD ID LPAREN varDecCommas RPAREN REQUIRE exp statements ENSURE exp
     '''
     if len(p) == 7:
         p[0] = {"private":False, "methodName": p[2], "args": p[4], "statements": p[6] }
