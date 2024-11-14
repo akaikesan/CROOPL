@@ -14,36 +14,35 @@ class Program
         new separate Buffer b
 
         call b::init()
-        //Produce|consume start 
 
-        //call p1::generate()
-        //call p2::generate()
+        call p1::generate()
+        call p2::generate()
 
-        //call p1::produce(b)// put produce
-        //call p2::produce(b)// put produce
+        call p1::produce(b)// put produce
+        call p2::produce(b)// put produce
 
-        //call c1::consume(b)// get consume
-        //call c2::consume(b)// get consume
+        call c1::consume(b)// get consume
+        call c2::consume(b)// get consume
 
 
-        //uncall c1::consume(b)// put produce
-        //uncall c2::consume(b)// put produce
+        uncall c1::consume(b)// put produce
+        uncall c2::consume(b)// put produce
 
-        //uncall p1::produce(b) // put consume
-        //uncall p2::produce(b) // put consume
+        uncall p1::produce(b) // put consume
+        uncall p2::produce(b) // put consume
 
 
         // uncalling produce|consume end
 
 
-        //delete separate Consumer c1
-        //delete separate Consumer c2
+        delete separate Consumer c1
+        delete separate Consumer c2
 
-        //uncall p1::generate()
-        //uncall p2::generate()
+        uncall p1::generate()
+        uncall p2::generate()
 
-        //delete separate Producer p1
-        //delete separate Producer p2
+        delete separate Producer p1
+        delete separate Producer p2
 
         uncall b::init()
         delete separate Buffer b
@@ -78,23 +77,25 @@ class Buffer
     method init()
         print "init-begin"
 
-        print memory
         MAX += 3
         new int[MAX] buffer
-        buffer[2] += 3
         print "init-end"
 
     method put(int i)
         require length < MAX
           buffer[length]  <=> i
+          print buffer
           print "produce"
+          print buffer
           length += 1
         ensure length > 0
 
     method get(int i)
         require length > 0
           length -= 1
+          print buffer
           buffer[length]  <=> i
+          print buffer
           print "consume"
         ensure length < MAX
 

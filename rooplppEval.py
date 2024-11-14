@@ -53,8 +53,13 @@ def deleteObjFromMuGamma(Gamma, globalMu, varName, separate):
         globalMu[globalMu[addr].val]['methodQ'].put(['delete', child_conn])
         deletable = parent_conn.recv()
         assert deletable == 'ready_delete'
-        print(deletable, ':', varName)
+        #print(deletable, ':', varName)
+        tobeNilobj = globalMu[globalMu[addr].val]
+        tobeNilobj.pop('methodQ')
+        tobeNilobj['status'] = 'nil'
+        globalMu[globalMu[addr].val] = tobeNilobj
         ProcDict[globalMu[Gamma[varName]].val].terminate()
+        ProcDict.pop(globalMu[Gamma[varName]].val)
     else:
         for k,v in globalMu[globalMu[Gamma[varName]].val]['gamma'].items():
             if k in ignore:
@@ -167,7 +172,6 @@ def statementInverter(statement, invert):
             return returnStatement
         elif (statement[0] == 'require'):
             pass
-
 
 def printMU(Gamma, MU):
     print(Gamma)
@@ -449,7 +453,29 @@ def evalStatement(classMap,
                 globalMu[leftAddr] = leftContent
 
             if (type(statement[2]) == list and type(statement[3]) == list):
-                pass
+
+
+                RlistAddr = globalMu[Gamma[statement[3][0]]].val
+                rightList = globalMu[RlistAddr]
+                RlistIndex= evalExp(Gamma, globalMu, statement[3][1])
+                rightContentVal = rightList[RlistIndex].val
+
+                LlistAddr = globalMu[Gamma[statement[2][0]]].val
+                leftList = globalMu[LlistAddr]
+                LlistIndex= evalExp(Gamma, globalMu, statement[2][1])
+                leftContentVal = leftList[LlistIndex].val
+                
+                if(RlistAddr != LlistAddr):
+                    leftList[LlistIndex].val = rightContentVal
+                    rightList[RlistIndex].val = leftContentVal
+
+                    globalMu[LlistAddr] = leftList
+                    globalMu[RlistAddr] = rightList
+                else:
+                    leftList[LlistIndex].val = rightContentVal
+                    leftList[RlistIndex].val = leftContentVal
+
+                    globalMu[LlistAddr] = leftList
 
         else:
             # readMu
@@ -476,6 +502,7 @@ def evalStatement(classMap,
 
             except:
                 print(statement[2], 'is not defined in class', '\'' + getType(globalMu[globalMu[Gamma['this']].val]['type']) + '\'')
+
 
             result = getAssignmentResult(statement[1], invert, left, right)
 
@@ -831,6 +858,7 @@ def evalStatement(classMap,
             runBlockStatement(classMap, statement[4], Gamma, globalMu, invert)
             assertValue = evalExp(Gamma, globalMu, statement[7])
             addr = Gamma[statement[6]]
+            print(addr)
 
             assert  assertValue == 'nil'
             assert statement[2] == statement[6]
@@ -979,7 +1007,6 @@ def interpreter(classMap,
 
                     e1Evaled = evalExp(Gamma, globalMu, exp)
                     if e1Evaled == False:
-
                         q.put(request)
                         continue
                     else:
@@ -1080,7 +1107,8 @@ def interpreter(classMap,
                             if globalMu[v]._type == 'int':
                                 globalMu.pop(v)
                             elif globalMu[v]._type == 'Address':
-                                globalMu.pop(globalMu[v].val)
+                                if k != 'this':
+                                    globalMu.pop(globalMu[v].val)
                                 globalMu.pop(v)
 
                         request[1].send('ready_delete')

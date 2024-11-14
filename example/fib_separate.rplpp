@@ -28,7 +28,7 @@ class Program
 
     method main()
         n ^= 7 
-        local Fib f = nil
+        local separate Fib f = nil
         new separate Fib f
         call f::init()
         call f::fib(n)
@@ -38,5 +38,5 @@ class Program
         uncall f::fib(n)
         uncall f::init()
         delete separate Fib f
-        delocal Fib f = nil
+        delocal separate Fib f = nil
 
