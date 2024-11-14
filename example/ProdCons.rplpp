@@ -5,7 +5,6 @@ class Program
     separate Consumer c1
     separate Consumer c2
     separate Buffer b
-    int i
 
     method main()
         new separate Producer p1
@@ -13,8 +12,6 @@ class Program
         new separate Consumer c1
         new separate Consumer c2
         new separate Buffer b
-
-        i += 1000
 
         call b::init()
         //Produce|consume start 
@@ -40,7 +37,7 @@ class Program
         // uncalling produce|consume end
 
 
-        //delete separate Producer p1
+        delete separate Producer p1
         //delete separate Producer p2
         //delete separate Consumer c1
         //delete separate Consumer c2
@@ -77,23 +74,19 @@ class Buffer
 
     method put(int i)
         require length < MAX
-          print i
           print buffer
           buffer[length]  <=> i
           print "produce"
           print buffer
           length += 1
-          print i
         ensure length > 0
 
     method get(int i)
         require length > 0
           length -= 1
-          print i  
           print buffer
           buffer[length]  <=> i
           print "consume"
           print buffer
-          print i
         ensure length < MAX
 

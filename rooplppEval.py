@@ -37,6 +37,35 @@ def waitForVarRefIsOne(globalMu, varAddr):
     while globalMu[varAddr].ref != 1:
         pass
 
+def deleteObjFromMuGamma(Gamma, globalMu, varName, separate):
+
+    ignore = ['type', 'methodQ', 'status', 'gamma']
+    for k,v in globalMu[globalMu[Gamma[varName]].val]['gamma'].items():
+        if k in ignore:
+            continue
+        varAddr = globalMu[v].val
+        if k == 'this':
+            globalMu.pop(v)
+        
+        elif globalMu[v]._type == 'int':
+            if globalMu[v].val != 0:
+                print('Error : delete object that has non-zero field')
+                return 'error'
+            else:
+                globalMu.pop(v)
+        elif globalMu[v]._type == 'Address':
+            if globalMu[varAddr]['status'] != 'nil' :
+                print('Error : delete object that has non-nil field')
+                return 'error'
+            else:
+                globalMu.pop(v)
+                globalMu.pop(varAddr)
+
+    obj = globalMu[globalMu[Gamma[varName]].val]
+    obj.pop('gamma')
+    obj['status'] = 'nil'
+    globalMu[globalMu[Gamma[varName]].val] = obj
+
 def statementInverter(statement, invert):
     returnStatement = statement[:]
     if not invert:
@@ -348,18 +377,24 @@ def evalStatement(classMap,
 
         if (statement[1] == '<=>'):
             if (type(statement[2]) != list and type(statement[3]) != list):
-                leftAddr = Gamma[statement[2]]
-                rightAddr = Gamma[statement[3]]
+                print(statement)
+                printMU(Gamma, globalMu)
+
+                leftAddr = Gamma[statement[2]] #x
+                rightAddr = Gamma[statement[3]] #y
                 leftContent = globalMu[leftAddr]
                 rightContent = globalMu[rightAddr]
 
-                leftContentVal = evalExp(Gamma, globalMu, statement[2])
-                rightContentVal = evalExp(Gamma, globalMu, statement[3])
+                leftContentVal = leftContent.val
+                rightContentVal = rightContent.val
                 leftContent.val = rightContentVal
                 rightContent.val = leftContentVal
 
                 globalMu[leftAddr] = leftContent
                 globalMu[rightAddr] = rightContent
+                print(statement)
+
+                printMU(Gamma,globalMu)
 
             if (type(statement[2]) == list and type(statement[3]) != list):
 
@@ -425,12 +460,15 @@ def evalStatement(classMap,
             printMU(Gamma, globalMu)
         else :
             content = globalMu[Gamma[statement[1]]]
+            print(Gamma[statement[1]])
+            print(content.val)
+            printMU(Gamma, globalMu)
             t = content._type
             if t == 'Address' and globalMu[content.val]['type'] == 'list':
-                print("[")
+                print("[", end="")
                 for k,v in globalMu[content.val].items():
                     if (k != 'type'):
-                        print(k, ':', v.val, ',',  v.ref, ',', v._type)
+                        print(k, ': (', v.val, ',',  v.ref, ',', v._type, end="), ")
                 print("]")
             if t == 'int':
                 print(evalExp(Gamma, globalMu, statement[1]))
@@ -520,35 +558,12 @@ def evalStatement(classMap,
 
         else: 
             # delete object (not list).
-            ignore = ['type', 'methodQ', 'status', 'gamma']
-
             if (len(statement) == 3):
-                for k,v in globalMu[globalMu[Gamma[statement[2]]].val]['gamma'].items():
-                    if k in ignore:
-                        continue
-                    varAddr = globalMu[v].val
-                    if k == 'this':
-                        globalMu.pop(v)
-                    
-                    elif globalMu[v]._type == 'int':
-                        if globalMu[v].val != 0:
-                            print('Error : delete object that has non-zero field')
-                            return 'error'
-                        else:
-                            globalMu.pop(v)
-                    elif globalMu[v]._type == 'Address':
-                        if globalMu[varAddr]['status'] != 'nil' :
-                            print('Error : delete object that has non-nil field')
-                            return 'error'
-                        else:
-                            globalMu.pop(v)
-                            globalMu.pop(varAddr)
-
-                obj = globalMu[globalMu[Gamma[statement[2]]].val]
-                obj.pop('gamma')
-                obj['status'] = 'nil'
-                globalMu[globalMu[Gamma[statement[2]]].val] = obj
+                deleteObjFromMuGamma(Gamma, globalMu, statement[2], False)
             elif(len(statement) == 4):
+                deleteObjFromMuGamma(Gamma, globalMu, statement[2], True)
+                print(Gamma[statement[2]])
+                print(ProcDict)
                 pass
 
     elif (statement[0] == 'copy'):
@@ -772,7 +787,7 @@ def evalStatement(classMap,
             globalMu[l] = Value(initValue, 'int')
 
             runBlockStatement(classMap, statement[4], Gamma, globalMu, invert)
-            assertValue = evalExp(Gamma, globalMu, statement[7], invert)
+            assertValue = evalExp(Gamma, globalMu, statement[7])
             addr = Gamma[statement[6]]
 
             assert  'int' == globalMu[l]._type
@@ -795,6 +810,7 @@ def evalStatement(classMap,
             objAddr = max(globalMu.keys()) + 1
             globalMu[l] = Value(objAddr, 'Address')
             globalMu[objAddr] = {'type': statement[1], 'status': 'nil' }
+            print(globalMu[Gamma[statement[6]]].val)
 
 
             runBlockStatement(classMap, statement[4], Gamma, globalMu, invert)
@@ -804,6 +820,8 @@ def evalStatement(classMap,
 
             assert  assertValue == 'nil'
             assert statement[2] == statement[6]
+            print(statement)
+            print(globalMu[addr].val)
             assert globalMu[globalMu[addr].val]['status'] == 'nil'
 
 

@@ -81,8 +81,12 @@ class Program
           local Cell cell = nil
             new Cell cell
             local Cell cellCopy = nil
+              print cell
+              print cellCopy
               copy Cell cell cellCopy
               call cell::setSelf(cellCopy)
+              print cell
+              print cellCopy
             delocal Cell cellCopy = nil
             call cell::setData(x)
             call list::appendCell(cell)
