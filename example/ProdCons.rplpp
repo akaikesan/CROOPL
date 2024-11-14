@@ -20,37 +20,44 @@ class Program
         call p2::generate()
 
 
-        uncall p1::produce(b) // put consume
-        uncall p2::produce(b) // put consume
-
         call c1::consume(b)// get consume
-        call c2::consume(b)// get consume
+        //call c2::consume(b)// get consume
 
         call p1::produce(b)// put produce
-        call p2::produce(b)// put produce
-        //Produce consume end 
-        // uncalling produce|consume start
+        //call p2::produce(b)// put produce
+
+        uncall p1::produce(b) // put consume
+        //uncall p2::produce(b) // put consume
+
         uncall c1::consume(b)// put produce
-        uncall c2::consume(b)// put produce
+        //uncall c2::consume(b)// put produce
 
 
         // uncalling produce|consume end
 
 
-        delete separate Producer p1
-        //delete separate Producer p2
-        //delete separate Consumer c1
-        //delete separate Consumer c2
+        delete separate Consumer c1
+        delete separate Consumer c2
 
-        //uncall b::init()
-        //delete separate Buffer b
+        uncall p1::generate()
+        uncall p2::generate()
+
+        delete separate Producer p1
+        delete separate Producer p2
+
+        uncall b::init()
+        //print memory
+        delete separate Buffer b
+        print "end"
 
 
 class Producer
   int data
 
   method generate()
-      data ^= 3
+      require data = 0
+        data ^= 3
+      ensure data = 3
 
   method produce(Buffer buf)
     call buf::put(data)
@@ -62,31 +69,32 @@ class Consumer
   method consume(Buffer  buf)
     call buf::get(data)
 
+
 class Buffer
     int[] buffer
+    Consumer[] consumers
     int length
     int MAX
 
     method init()
+        print "init-begin"
+
         MAX += 3
         new int[MAX] buffer
-
+        buffer[2] += 3
+        print "init-end"
 
     method put(int i)
         require length < MAX
-          print buffer
           buffer[length]  <=> i
           print "produce"
-          print buffer
           length += 1
         ensure length > 0
 
     method get(int i)
         require length > 0
           length -= 1
-          print buffer
           buffer[length]  <=> i
           print "consume"
-          print buffer
         ensure length < MAX
 

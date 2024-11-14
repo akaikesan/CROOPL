@@ -19,6 +19,13 @@ class Value:
     def countDown(self):
         self.ref -= 1
 
+
+def checkVarIsDefined(Gamma, var):
+    if var in Gamma.keys():
+        return True
+    else:
+        return False
+
 def runBlockStatement(classMap, block, Gamma, globalMu, invert):
         stmts = []
         result = 'success'
@@ -40,31 +47,40 @@ def waitForVarRefIsOne(globalMu, varAddr):
 def deleteObjFromMuGamma(Gamma, globalMu, varName, separate):
 
     ignore = ['type', 'methodQ', 'status', 'gamma']
-    for k,v in globalMu[globalMu[Gamma[varName]].val]['gamma'].items():
-        if k in ignore:
-            continue
-        varAddr = globalMu[v].val
-        if k == 'this':
-            globalMu.pop(v)
-        
-        elif globalMu[v]._type == 'int':
-            if globalMu[v].val != 0:
-                print('Error : delete object that has non-zero field')
-                return 'error'
-            else:
+    if separate:
+        parent_conn, child_conn = mp.Pipe()
+        addr = Gamma[varName]
+        globalMu[globalMu[addr].val]['methodQ'].put(['delete', child_conn])
+        deletable = parent_conn.recv()
+        assert deletable == 'ready_delete'
+        print(deletable)
+        ProcDict[globalMu[Gamma[varName]].val].terminate()
+    else:
+        for k,v in globalMu[globalMu[Gamma[varName]].val]['gamma'].items():
+            if k in ignore:
+                continue
+            varAddr = globalMu[v].val
+            if k == 'this':
                 globalMu.pop(v)
-        elif globalMu[v]._type == 'Address':
-            if globalMu[varAddr]['status'] != 'nil' :
-                print('Error : delete object that has non-nil field')
-                return 'error'
-            else:
-                globalMu.pop(v)
-                globalMu.pop(varAddr)
+            
+            elif globalMu[v]._type == 'int':
+                if globalMu[v].val != 0:
+                    print('Error : delete object that has non-zero field')
+                    return 'error'
+                else:
+                    globalMu.pop(v)
+            elif globalMu[v]._type == 'Address':
+                if globalMu[varAddr]['status'] != 'nil' :
+                    print('Error : delete object that has non-nil field')
+                    return 'error'
+                else:
+                    globalMu.pop(v)
+                    globalMu.pop(varAddr)
 
-    obj = globalMu[globalMu[Gamma[varName]].val]
-    obj.pop('gamma')
-    obj['status'] = 'nil'
-    globalMu[globalMu[Gamma[varName]].val] = obj
+        obj = globalMu[globalMu[Gamma[varName]].val]
+        obj.pop('gamma')
+        obj['status'] = 'nil'
+        globalMu[globalMu[Gamma[varName]].val] = obj
 
 def statementInverter(statement, invert):
     returnStatement = statement[:]
@@ -181,9 +197,17 @@ def refcountDown(globalMu, addr):
     globalMu[addr] = v
 
 def writeValToMu(Gamma, globalMu, var, val):
-    v =  globalMu[Gamma[var]]
-    v.val =  val
-    globalMu[Gamma[var]] = v
+    if isinstance(var, list):
+        listAddress = globalMu[Gamma[var[0]]].val
+        writtenList = globalMu[listAddress]
+        v = writtenList[int(var[1])]
+        v.val = val
+        writtenList[int(var[1])] = v 
+        globalMu[listAddress] = writtenList
+    else:
+        v =  globalMu[Gamma[var]]
+        v.val =  val
+        globalMu[Gamma[var]] = v
 
 def getType(t):
     if t[0] == 'separate':
@@ -282,7 +306,7 @@ def checkListIsDeletable(list):
             raise Exception("you can invert-new only 0-initialized array")
 
 def evalExp(Gamma, globalMu, exp):
-    # expression doesnt care about invert???
+    # expression doesnt care about invert? -> yes
     if isinstance(exp, list):
         if len(exp) == 1:
             # [<int>] 
@@ -377,8 +401,6 @@ def evalStatement(classMap,
 
         if (statement[1] == '<=>'):
             if (type(statement[2]) != list and type(statement[3]) != list):
-                print(statement)
-                printMU(Gamma, globalMu)
 
                 leftAddr = Gamma[statement[2]] #x
                 rightAddr = Gamma[statement[3]] #y
@@ -392,9 +414,6 @@ def evalStatement(classMap,
 
                 globalMu[leftAddr] = leftContent
                 globalMu[rightAddr] = rightContent
-                print(statement)
-
-                printMU(Gamma,globalMu)
 
             if (type(statement[2]) == list and type(statement[3]) != list):
 
@@ -435,12 +454,27 @@ def evalStatement(classMap,
             # readMu
             left = 0
             try:
-                addr = Gamma[statement[2]]
-                left = globalMu[addr].val
+                if isinstance(statement[2], list):
+                    index = evalExp(Gamma,globalMu,statement[2][1])
+                    addr = Gamma[statement[2][0]]
+                    left = globalMu[globalMu[addr].val][index].val
+                else:
+                    addr = Gamma[statement[2]]
+                    left = globalMu[addr].val
             except:
                 print(statement[2], 'is not defined in class', '\'' + getType(globalMu[globalMu[Gamma['this']].val]['type']) + '\'')
 
-            right = evalExp(Gamma, globalMu, statement[3])
+            right = 0
+            try:
+                if isinstance(statement[3], list):
+                    index = evalExp(Gamma,globalMu,statement[3][1])
+                    addr = Gamma[statement[3][0]]
+                    right = globalMu[globalMu[addr].val][index].val
+                else:
+                    right = evalExp(Gamma, globalMu, statement[3])
+
+            except:
+                print(statement[2], 'is not defined in class', '\'' + getType(globalMu[globalMu[Gamma['this']].val]['type']) + '\'')
 
             result = getAssignmentResult(statement[1], invert, left, right)
 
@@ -460,16 +494,14 @@ def evalStatement(classMap,
             printMU(Gamma, globalMu)
         else :
             content = globalMu[Gamma[statement[1]]]
-            print(Gamma[statement[1]])
-            print(content.val)
-            printMU(Gamma, globalMu)
             t = content._type
             if t == 'Address' and globalMu[content.val]['type'] == 'list':
-                print("[", end="")
+                print("[-----")
                 for k,v in globalMu[content.val].items():
                     if (k != 'type'):
-                        print(k, ': (', v.val, ',',  v.ref, ',', v._type, end="), ")
-                print("]")
+                        #print(k, ': (', v.val, ',',  v.ref, ',', v._type, end="), ")
+                        print(k, ':', v.val)
+                print("]----")
             if t == 'int':
                 print(evalExp(Gamma, globalMu, statement[1]))
 
@@ -526,11 +558,16 @@ def evalStatement(classMap,
 
                 proc = makeSeparatedProcess(classMap, globalMu,  objPointerAddr)
                 global ProcDict
-                ProcDict[Gamma[statement[2]]] = proc
+                ProcDict[globalMu[Gamma[statement[2]]].val] = proc
 
             if (len(statement) == 3):
 
                 if isinstance(statement[2], list):
+                    isdefined = checkVarIsDefined(Gamma, statement[2][0])
+                    if not isdefined:
+                        print(statement[2][0], 'is not defined')
+                        return 'error'
+
                     objPointerAddr = globalMu[globalMu[Gamma[statement[2][0]]].val][int(statement[2][1])].val
                     objAddr = globalMu[objPointerAddr].val
                 else:
@@ -562,9 +599,6 @@ def evalStatement(classMap,
                 deleteObjFromMuGamma(Gamma, globalMu, statement[2], False)
             elif(len(statement) == 4):
                 deleteObjFromMuGamma(Gamma, globalMu, statement[2], True)
-                print(Gamma[statement[2]])
-                print(ProcDict)
-                pass
 
     elif (statement[0] == 'copy'):
         #['copy', 'Cell', 'cell', 'cellCopy']
@@ -653,6 +687,8 @@ def evalStatement(classMap,
                 argsAddr      = []
                 for varName in statement[3]:
                     varAddr = Gamma[varName]
+                    #print(statement)
+                    #print('countup:',varName,varAddr)
                     refcountUp(globalMu, varAddr)
                     argsAddr.append(varAddr)
 
@@ -669,9 +705,7 @@ def evalStatement(classMap,
             funcArgs   = classMap[t]['methods'][statement[1]]['args']
             passedArgs = statement[2]
 
-            for i in range(len(funcArgs)):
-                Gamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
-
+            #local call doesnt change Gamma.
 
             localInvert = invert
             if (statement[0] == 'uncall' and invert):
@@ -685,8 +719,6 @@ def evalStatement(classMap,
                               Gamma,
                               globalMu, localInvert)
 
-            for i in range(len(funcArgs)):
-                Gamma.pop(funcArgs[i]['name'])
 
 
             
@@ -711,6 +743,7 @@ def evalStatement(classMap,
 
             e2Evaled = evalExp(Gamma, globalMu, statement[4])
             assert e2Evaled == False
+
 
 
 
@@ -810,7 +843,6 @@ def evalStatement(classMap,
             objAddr = max(globalMu.keys()) + 1
             globalMu[l] = Value(objAddr, 'Address')
             globalMu[objAddr] = {'type': statement[1], 'status': 'nil' }
-            print(globalMu[Gamma[statement[6]]].val)
 
 
             runBlockStatement(classMap, statement[4], Gamma, globalMu, invert)
@@ -820,8 +852,6 @@ def evalStatement(classMap,
 
             assert  assertValue == 'nil'
             assert statement[2] == statement[6]
-            print(statement)
-            print(globalMu[addr].val)
             assert globalMu[globalMu[addr].val]['status'] == 'nil'
 
 
@@ -917,12 +947,12 @@ def interpreter(classMap,
 
                     e1Evaled = evalExp(Gamma, globalMu, exp)
                     if e1Evaled == False:
-                        #print("require failed")
+                        print("require failed:",request )
+
                         q.put(request)
                         continue
                     else:
-                        #print('require/ensure passed')
-                        #print(request)
+                        print('require/ensure passed:', request)
                         pass
 
                 statements = classMap[getType(procObjtype)]['methods'][methodName]['statements']
@@ -966,6 +996,8 @@ def interpreter(classMap,
                 # decrement reference Counter & remove args from Gamma
                 for i in range(len(passedArgs)):
                     Gamma.pop(funcArgs[i]['name'])
+                    #print(request)
+                    #print('countDown:',passedArgs[i])
                     refcountDown(globalMu, passedArgs[i])
 
 
@@ -980,6 +1012,65 @@ def interpreter(classMap,
                         request[4].send(methodName + ' method ended')
                     elif (request[0] == 'main' and len(ProcDict) == 0):
                         request[4].send(methodName + ' method ended')
+            elif lenReq == 2:
+                if (historyStack.qsize() == 0 and q.qsize() == 0):
+                    #printMU(Gamma,globalMu)
+                    flag = True 
+                    for k,v in Gamma.items():
+                        if globalMu[v]._type == 'int':
+                            # integer deletable check = 0 - check
+                            if globalMu[v].val != 0 or globalMu[v].ref != 1:
+                                #printMU(Gamma, globalMu)
+                                #print('not deletable:',k,v)
+                                #print('type:',className)
+                                flag = False
+                                break
+                        elif globalMu[v]._type == 'Address':
+
+                            listAddr = globalMu[v].val
+                            if globalMu[listAddr]['type'] == 'list':
+                                # list deletable check
+                                if globalMu[listAddr][0]._type == 'int':
+                                    # list 0-check
+                                    for i in range(len(globalMu[listAddr]) - 1):
+                                        # TODO : delete listを実装できてない
+                                        if globalMu[listAddr][i].val != 0:
+                                            print('not deletable:',k,v,i)
+                                            flag = False
+                                            # exit here to ->
+                                            break
+                                    else:
+                                        continue
+                                    break
+                                else:
+                                    # TODO:list nil-check
+                                    pass
+                            else:
+                                # object deletable check
+                                if globalMu[globalMu[v].val]['status'] != 'nil' or globalMu[v].ref != 1:
+                                    if('this' == k) :
+                                        continue 
+
+                                    print('not deletable:',k,v)
+                                    flag = False
+                                    break
+                    # exit here to -> "here"
+                    if flag:
+                        for k,v in Gamma.items():
+                            if globalMu[v]._type == 'int':
+                                globalMu.pop(v)
+                            elif globalMu[v]._type == 'Address':
+                                globalMu.pop(globalMu[v].val)
+                                globalMu.pop(v)
+
+                        request[1].send('ready_delete')
+                    else:
+                        q.put(request)
+                else:
+                    q.put(request)
+
+
+
 
 
 
