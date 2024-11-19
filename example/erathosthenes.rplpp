@@ -1,39 +1,31 @@
 class Sieve 
-    
-    method init()
-        new int[2] xs
-  
-    method fib(int n)
-        if n = 0 then
-            xs[0] ^= 1
-       	    xs[1] ^= 1
-        else 
-            n -= 1
-            call fib(n)
-            xs[0] += xs[1]
-            print xs[0]
-            xs[0] <=> xs[1]
-        fi xs[0] = xs[1]
+    prime
 
-     method get (int out)
-        out ^= xs[1]
+    setPrime(int p)
+        prime += p
 
-     method pr (int r)
-        print r
+    method sieve(int[] table, int tableSize)
+        local int i = 0 
+        from i = 0 do skip
+        loop
+            if table[i] % prime = 0 then
+                table[i] += 1
+            else skip
+            fi table[i] % prime = 0
+            i += 1
+        until i = tableSize
 
-class Program
-    int result
-    int n
+ Program
+    int[] table
+    int limit
+    int sievelimit
+    Sieve[] sieves
 
-    method main()
-        n ^= 8
-        local Fib f = nil
-        new separate Fib f
-        call f::init()
-        call f::fib(n)
-        call f::get(result)
-        call f::pr(result)
-        uncall f::fib(n)
-        uncall f::init()
-        delete Fib f
-        delocal Fib f = nil
+    method  main()
+        limit += 100
+        new int[100] table
+        sievelimit = 10
+
+
+
+

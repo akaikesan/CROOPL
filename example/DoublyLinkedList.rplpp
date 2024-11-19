@@ -1,3 +1,4 @@
+
 class Cell
   int data
   int index

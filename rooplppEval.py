@@ -40,10 +40,6 @@ def runBlockStatement(classMap, block, Gamma, globalMu, invert):
 
         return result
 
-def waitForVarRefIsOne(globalMu, varAddr):
-    while globalMu[varAddr].ref != 1:
-        pass
-
 def deleteObjFromMuGamma(Gamma, globalMu, varName, separate):
 
     ignore = ['type', 'methodQ', 'status', 'gamma']
@@ -52,35 +48,30 @@ def deleteObjFromMuGamma(Gamma, globalMu, varName, separate):
         addr = Gamma[varName]
         globalMu[globalMu[addr].val]['methodQ'].put(['delete', child_conn])
         deletable = parent_conn.recv()
+
         assert deletable == 'ready_delete'
         #print(deletable, ':', varName)
         tobeNilobj = globalMu[globalMu[addr].val]
         tobeNilobj.pop('methodQ')
         tobeNilobj['status'] = 'nil'
+
         globalMu[globalMu[addr].val] = tobeNilobj
         ProcDict[globalMu[Gamma[varName]].val].terminate()
         ProcDict.pop(globalMu[Gamma[varName]].val)
     else:
+        waitUntilDeletable(Gamma, globalMu, varName)
         for k,v in globalMu[globalMu[Gamma[varName]].val]['gamma'].items():
             if k in ignore:
                 continue
             varAddr = globalMu[v].val
+
             if k == 'this':
                 globalMu.pop(v)
-            
             elif globalMu[v]._type == 'int':
-                if globalMu[v].val != 0:
-                    print('Error : delete object that has non-zero field')
-                    return 'error'
-                else:
-                    globalMu.pop(v)
+                globalMu.pop(v)
             elif globalMu[v]._type == 'Address':
-                if globalMu[varAddr]['status'] != 'nil' :
-                    print('Error : delete object that has non-nil field')
-                    return 'error'
-                else:
-                    globalMu.pop(v)
-                    globalMu.pop(varAddr)
+                globalMu.pop(v)
+                globalMu.pop(varAddr)
 
         obj = globalMu[globalMu[Gamma[varName]].val]
         obj.pop('gamma')
@@ -170,8 +161,6 @@ def statementInverter(statement, invert):
             returnStatement[6] = id1
             returnStatement[7] = exp1
             return returnStatement
-        elif (statement[0] == 'require'):
-            pass
 
 def printMU(Gamma, MU):
     print(Gamma)
@@ -296,18 +285,58 @@ def makeSeparatedProcess(classMap,
 
     return p
 
-def checkObjIsDeletable(varList, env):
-    env['type'] = 0
-    for k in varList :
-        if k == '#q':
-            continue
-        if  not (env[k] == {} or env[k] == 0):
-            raise Exception("you can invert-new or delete only nil-initialized object")
+def waitUntilDeletable(Gamma, globalMu, objVarName):
+    addr = Gamma[objVarName]
+    while True:
+        #print('wait for', objVarName, 'being deletable')
+        if globalMu[addr]._type == 'Address':
+            objAddr = globalMu[addr].val
+            if globalMu[objAddr]['type'][0] == 'list':
+                # list deletable check
+                if 'status' in globalMu[objAddr].keys():
+                    if globalMu[objAddr]['status'] != 'nil' :
+                        #print('deletable')
+                        continue 
+                    elif globalMu[objAddr]['status'] == 'nil' :
+                        break
+                   
+                else:
+                    # list is newed
+                    listAddr = globalMu[addr].val
+                    for k,v in globalMu[listAddr].items():
+                        if k == 'type':
+                            continue
+                        elif globalMu[listAddr][0]._type == 'int':    
+                            if v.val != 0 or v.ref != 1:
+                                continue 
+                        elif globalMu[listAddr][0]._type == 'Address':
+                            if v.val == 'type':
+                                continue
+                            if globalMu[v.val]['status'] != 'nil' or v.ref != 1:
+                                continue
+                                
+                    break
+            else:
+                # wait until local object is deletable
+                flag = True
+                localGamma = globalMu[objAddr]['gamma']
+                for k,v in localGamma.items():
+                    if k == 'this':
+                        continue
+                    elif globalMu[v]._type == 'int':
+                        if globalMu[v].val != 0 or globalMu[v].ref != 1:
+                            flag = False 
+                            break
+                    elif globalMu[v]._type == 'Address':
+                        if globalMu[globalMu[v].val]['status'] != 'nil':
+                            flag = False 
+                            break
+                if flag:
+                    break
+        else:
+            raise Exception('unexpected type when delete', objVarName)
+        break
 
-def checkListIsDeletable(list):
-    for i in list:
-        if i != 0:
-            raise Exception("you can invert-new only 0-initialized array")
 
 def evalExp(Gamma, globalMu, exp):
     # expression doesnt care about invert? -> yes
@@ -527,12 +556,15 @@ def evalStatement(classMap,
             content = globalMu[Gamma[statement[1]]]
             t = content._type
             if t == 'Address' and globalMu[content.val]['type'][0] == 'list':
-                print("[-----")
+                print("[", end="")
                 for k,v in globalMu[content.val].items():
                     if (k != 'type'):
                         #print(k, ': (', v.val, ',',  v.ref, ',', v._type, end="), ")
-                        print(k, ':', v.val)
-                print("]----")
+                        #print(k, ':', v.val, end="")
+                        print( v.val, end="")
+                        if k != len(globalMu[content.val].items()) - 2:
+                            print(', ', end="")
+                print("]")
             if t == 'int':
                 print(evalExp(Gamma, globalMu, statement[1]))
 
@@ -610,8 +642,6 @@ def evalStatement(classMap,
                     return 'error'
 
                 makeLocalObj(classMap, globalMu, objPointerAddr)
-                
-                
 
 
 
@@ -622,69 +652,79 @@ def evalStatement(classMap,
         # ['delete', className, varName]
 
         if isinstance(statement[1], list): 
+            # this can be replaced with waitUntilDeletable
             # delete list
+            waitUntilDeletable(Gamma, globalMu, statement[2])
             varAddr = Gamma[statement[2]]
             listAddr = globalMu[varAddr].val
-            flag = True
-            for k,v in globalMu[listAddr].items():
-                if k == 'type':
-                    continue
-                elif globalMu[listAddr][0]._type == 'int':    
-                    if v.val != 0:
-                        flag = False
-                        break
-                else:
-                    if v.val == 'type':
-                        continue
-                    if globalMu[v.val]['status'] != 'nil':
-                        flag = False
-                        break
-            if flag:
-                if globalMu[listAddr][0]._type == 'int':    
-                    globalMu[listAddr] = {"type" : ["list", "int"], "status": "nil"}
-                elif globalMu[listAddr][0]._type == 'Address':    
-                    for k,v in globalMu[listAddr].values():
-                        if k != 'type':
-                            globalMu[v.val] = {"type" : ["list", statement[1]], "status": "nil"}
-                else:
-                    return 'error'
 
-
-
-
+            if globalMu[listAddr][0]._type == 'int':    
+                globalMu[listAddr] = {"type" : ["list", "int"], "status": "nil"}
+            elif globalMu[listAddr][0]._type == 'Address':    
+                for k,v in globalMu[listAddr].values():
+                    if k != 'type':
+                        globalMu[v.val] = {"type" : ["list", statement[1]], "status": "nil"}
+            else:
+                return 'error'
         else: 
             # delete object (not list).
             if (len(statement) == 3):
                 deleteObjFromMuGamma(Gamma, globalMu, statement[2], False)
             elif(len(statement) == 4):
+                assert globalMu[globalMu[Gamma[statement[2]]].val]['type'][0] == 'separate'
                 deleteObjFromMuGamma(Gamma, globalMu, statement[2], True)
 
     elif (statement[0] == 'copy'):
         #['copy', 'Cell', 'cell', 'cellCopy']
-        copyFromVar = Gamma[statement[2]]
-        copyFromVal = globalMu[copyFromVar].val ## 
+        if statement[1] == 'int':
+            copyFromVar = Gamma[statement[2]]
+            copyFromValValue = globalMu[copyFromVar].val ## 
 
-        copyToVar = Gamma[statement[3]]
-        targetVarVal = globalMu[copyToVar]
+            copyToVar = Gamma[statement[3]]
+            targetVarVal = globalMu[copyToVar]
 
-        if(globalMu[targetVarVal.val]['status'] != 'nil'):
-            print('Error : copy target should be nil')
-            return 'error'
+            if(targetVarVal.val != 0):
+                print('Error : copy target should be 0')
+                return 'error'
+            else:
+                # remove nil-obj with no reference
+                globalMu.pop(targetVarVal.val)
+
+            targetVarVal.val = copyFromValValue
+            globalMu[copyToVar] = targetVarVal
         else:
-            # remove nil-obj with no reference
-            globalMu.pop(targetVarVal.val)
+            copyFromVar = Gamma[statement[2]]
+            copyFromValValue = globalMu[copyFromVar].val ## 
 
-        targetVarVal.val = copyFromVal
-        globalMu[copyToVar] = targetVarVal
+            copyToVar = Gamma[statement[3]]
+            targetVarVal = globalMu[copyToVar]
+
+            if(globalMu[targetVarVal.val]['status'] != 'nil'):
+                print('Error : copy target should be nil')
+                return 'error'
+            else:
+                # remove nil-obj with no reference
+                globalMu.pop(targetVarVal.val)
+
+            targetVarVal.val = copyFromValValue
+            globalMu[copyToVar] = targetVarVal
 
     elif (statement[0] == 'uncopy'):
         #['uncopy', 'Cell', 'cell', 'cellCopy']
         if statement[1] == 'int':
             assert globalMu[Gamma[statement[3]]]._type == 'int'
+            while True:
+                if globalMu[Gamma[statement[3]]].ref == 1:
+                    break
             globalMu[Gamma[statement[3]]].val = 0
         else:
             assert globalMu[Gamma[statement[3]]]._type == 'Address'
-            assert globalMu[globalMu[Gamma[statement[3]]].val]['status'] != 'nil'
+            #check copied var reference is 1
+            # no need to check var is nil
+            while True:
+                if globalMu[Gamma[statement[3]]].ref == 1:
+                    break
+
             l = max(globalMu.keys()) + 1
             writeValToMu(Gamma, globalMu, statement[3], l)
             globalMu[l] ={'type' : statement[1], 'status' : 'nil'}
@@ -746,8 +786,6 @@ def evalStatement(classMap,
                 argsAddr      = []
                 for varName in statement[3]:
                     varAddr = Gamma[varName]
-                    #print(statement)
-                    #print('countup:',varName,varAddr)
                     refcountUp(globalMu, varAddr)
                     argsAddr.append(varAddr)
 
@@ -838,8 +876,9 @@ def evalStatement(classMap,
 
 
 
-    # LOCAL:0 type:1 id:2 EQ exp:3  statements:4 DELOCAL type:5 id:6 EQ exp:7
     elif (statement[0] == 'local'):
+        # local - delocal
+        # LOCAL:0 type:1 id:2 EQ exp:3  statements:4 DELOCAL type:5 id:6 EQ exp:7
 
 
         if (statement[1][0] == 'separate'):
@@ -858,7 +897,6 @@ def evalStatement(classMap,
             runBlockStatement(classMap, statement[4], Gamma, globalMu, invert)
             assertValue = evalExp(Gamma, globalMu, statement[7])
             addr = Gamma[statement[6]]
-            print(addr)
 
             assert  assertValue == 'nil'
             assert statement[2] == statement[6]
@@ -884,8 +922,11 @@ def evalStatement(classMap,
             addr = Gamma[statement[6]]
 
             assert  'int' == globalMu[l]._type
-            assert  assertValue == globalMu[addr].val
             assert statement[2] == statement[6]
+
+            while True:
+                if globalMu[l].ref == 1 and assertValue == globalMu[addr].val:
+                    break
 
             Gamma.pop(statement[6])
             globalMu.pop(addr)
@@ -910,10 +951,11 @@ def evalStatement(classMap,
             assertValue = evalExp(Gamma, globalMu, statement[7])
             addr = Gamma[statement[6]]
 
-            assert  assertValue == 'nil'
             assert statement[2] == statement[6]
-            assert globalMu[globalMu[addr].val]['status'] == 'nil'
 
+            while True:
+                if globalMu[addr].ref == 1 and assertValue == evalExp(Gamma, globalMu, statement[6]):
+                    break
 
             Gamma.pop(statement[6])
 
@@ -941,7 +983,6 @@ def interpreter(classMap,
                 Gamma,
                 globalMu):
 
-    # print("interpreter of " + className + ":"+objName + " start")
 
     global m
     m = mp.Manager()
@@ -1027,18 +1068,13 @@ def interpreter(classMap,
                         historyTop = historyStack.get()
 
                     else:
-                        #print('history unmatched')
                         q.put(request)
                         continue
 
                     if (request[0]  == historyTop[0] and callerObjAddr == historyTop[3]) and ((historyTop[2] == 'call') and True):
 
-                        #print("HT:",historyTop)
-                        #print("HT MATCH:",request)
                         pass
                     else:
-                        #print("HT :",historyTop)
-                        #print("HT ReQ:",request)
                         q.put(request)
                         historyStack.put(historyTop)
                         continue
@@ -1053,8 +1089,6 @@ def interpreter(classMap,
                 # decrement reference Counter & remove args from Gamma
                 for i in range(len(passedArgs)):
                     Gamma.pop(funcArgs[i]['name'])
-                    #print(request)
-                    #print('countDown:',passedArgs[i])
                     refcountDown(globalMu, passedArgs[i])
 
 
@@ -1085,11 +1119,9 @@ def interpreter(classMap,
                                 # list deletable check
                                 if not 'status' in globalMu[listAddr].keys():
                                     flag = False
-                                    #print('not deletable') 
                                     break
                                 elif 'status' in globalMu[listAddr].keys():
                                     if globalMu[listAddr]['status'] == 'nil':
-                                        #print('deletable')
                                         pass
                                 else:
                                     print('deletable')

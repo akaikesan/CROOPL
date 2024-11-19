@@ -1,45 +1,83 @@
-class Proc1
-
-   int data
-
-
-   method pr()
-      print memory
-
-   method init()
-      data += 22
-
-   method get(int i, int output)
-       data += 20
-       i += data 
-
-class Proc2
-
-   int data
-
-   method get()
-        local int id = 0 
-          id += 2
-          print ""
-        delocal int id = 2
-
 class Program
-    int data1 
-    int data2
-    int data3 
-    separate Proc1  p
-    separate Proc1 p2
-    Proc1 p3
+     Producer p1
+     Producer p2
+
+    separate Consumer c1
+    separate Consumer c2
+    separate Buffer b
+
+    method main()
+        new  Producer p1
+        new  Producer p2
+        new separate Consumer c1
+        new separate Consumer c2
+        new separate Buffer b
+
+        call b::init()
+
+        call p1::generate()
+        call p2::generate()
 
 
-    private method main()
-        new separate Proc1 p
-        call p::pr()
-        new separate Proc1 p2
-        call p2::get(data1, data2)
-        call p2::get(data1, data2)
-        new Proc1 p3
-        print memory
+        // uncalling produce|consume end
 
-    private method pr(int data, int output)
-         print data
+        delete separate Consumer c1
+        delete separate Consumer c2
+
+        //uncall p1::generate()
+        //uncall p2::generate()
+
+        delete Producer p1
+        delete Producer p2
+
+        uncall b::init()
+        delete separate Buffer b
+        print "end"
+
+
+class Producer
+  int data
+
+  method generate()
+      require data = 0
+        data ^= 3
+      ensure data = 3
+
+  method produce(Buffer buf)
+    call buf::put(data)
+
+
+class Consumer
+  int data
+
+  method consume(Buffer  buf)
+    call buf::get(data)
+
+
+class Buffer
+    int[] buffer
+    int length
+    int MAX
+
+    method init()
+        MAX += 3
+        new int[MAX] buffer
+
+    method put(int i)
+        require length < MAX
+          buffer[length]  <=> i
+          print buffer
+          print "produce"
+          print buffer
+          length += 1
+        ensure length > 0
+
+    method get(int i)
+        require length > 0
+          length -= 1
+          print buffer
+          buffer[length]  <=> i
+          print buffer
+          print "consume"
+        ensure length < MAX
+

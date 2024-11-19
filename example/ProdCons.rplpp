@@ -24,18 +24,16 @@ class Program
         call c1::consume(b)// get consume
         call c2::consume(b)// get consume
 
-
         uncall c1::consume(b)// put produce
         uncall c2::consume(b)// put produce
 
         uncall p1::produce(b) // put consume
         uncall p2::produce(b) // put consume
 
-
         // uncalling produce|consume end
 
-
         delete separate Consumer c1
+        print memory
         delete separate Consumer c2
 
         uncall p1::generate()
@@ -70,16 +68,12 @@ class Consumer
 
 class Buffer
     int[] buffer
-    Consumer[] consumers
     int length
     int MAX
 
     method init()
-        print "init-begin"
-
         MAX += 3
         new int[MAX] buffer
-        print "init-end"
 
     method put(int i)
         require length < MAX

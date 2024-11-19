@@ -59,12 +59,10 @@ def p_type(p):
     '''
     type : INT
     | ID 
-    | INT ATTACHED 
     | SEPARATE ID
-    | SEPARATE ID ATTACHED
-    | SEPARATE ID DETACHABLE 
     | INT LBRA RBRA
     | ID LBRA RBRA
+    | SEPARATE ID ATTACHED
     '''
     if len(p) == 2:
         p[0] = [p[1]]
