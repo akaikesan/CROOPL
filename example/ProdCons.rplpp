@@ -33,7 +33,6 @@ class Program
         // uncalling produce|consume end
 
         delete separate Consumer c1
-        print memory
         delete separate Consumer c2
 
         uncall p1::generate()

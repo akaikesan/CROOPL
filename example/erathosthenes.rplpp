@@ -1,11 +1,11 @@
 class Sieve 
-    prime
+    int prime
 
-    setPrime(int p)
+    method setPrime(int p)
         prime += p
+        print p
 
     method sieve(int[] table, int tableSize)
-        local int i = 0 
         from i = 0 do skip
         loop
             if table[i] % prime = 0 then
@@ -15,16 +15,61 @@ class Sieve
             i += 1
         until i = tableSize
 
- Program
+class Program
     int[] table
-    int limit
+    int tSize 
+    int sLim
     int sievelimit
-    Sieve[] sieves
+    separate Sieve[] sieves
+
 
     method  main()
-        limit += 100
+        tSize += 100
+        sLim += 10
         new int[100] table
-        sievelimit = 10
+        new separate Sieve[11] sieves
+        call initSieves(sLim, table)
+
+        local int i = 2
+        from i = 2 do
+            if table[i] = 0 then
+                local int j = i
+                    new separate Sieve sieves[i]
+                    call sieves[i]::setPrime(j)
+                delocal int j = i // wait j.ref == 1
+            else skip
+            fi table[i] = 0
+            i += 1
+        loop skip
+        until i > sLim
+        delocal int i = sLim
+
+    method initSieves(int lim, Sieve[] table)
+        table[0] += 1
+        table[1] += 1
+        local int l = 2
+        from l = 2 do
+            local int i = 2 
+            from i = 2 do                     // l try to go through sieve from 2-l
+
+                if table[i] = 0 & i != l then // table[i] = 0 means i is prime
+                    if l % i = 0 then
+                        table[l] += 1
+                    else skip fi l % i = 0 
+                else skip
+                fi table[i] = 0 & i != l
+                i += 1
+
+            loop skip
+            until i > l
+            delocal int i = l + 1
+            l += 1
+
+        loop skip
+        until l > lim
+        delocal int l = lim + 1
+
+
 
 
 

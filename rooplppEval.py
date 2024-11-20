@@ -2,6 +2,7 @@ import multiprocessing as mp
 import time
 import sys
 import queue
+import traceback
 
 
 ## type is always List. 
@@ -193,9 +194,10 @@ def writeValToMu(Gamma, globalMu, var, val):
     if isinstance(var, list):
         listAddress = globalMu[Gamma[var[0]]].val
         writtenList = globalMu[listAddress]
-        v = writtenList[int(var[1])]
+        index = evalExp(Gamma, globalMu, var[1])
+        v = writtenList[index]
         v.val = val
-        writtenList[int(var[1])] = v 
+        writtenList[index] = v 
         globalMu[listAddress] = writtenList
     else:
         v =  globalMu[Gamma[var]]
@@ -354,7 +356,7 @@ def evalExp(Gamma, globalMu, exp):
                 return evalExp(Gamma, globalMu, exp[0]) - evalExp(Gamma, globalMu, exp[2])
 
             elif (exp[1] == '/'):
-                return evalExp(Gamma, globalMu, exp[0]) / evalExp(Gamma, globalMu, exp[2])
+                return int(evalExp(Gamma, globalMu, exp[0]) / evalExp(Gamma, globalMu, exp[2]))
             elif (exp[1] == '*'):
                 return evalExp(Gamma, globalMu, exp[0]) * evalExp(Gamma, globalMu, exp[2])
             elif (exp[1] == '='):
@@ -574,58 +576,85 @@ def evalStatement(classMap,
 
         # ['new', className, varName, 'separate']
         # ['new', className, varName]
-
         if isinstance(statement[1], list): 
+            # new list
             varAddr = Gamma[statement[2]]
             objAddr = globalMu[varAddr].val
             size = evalExp(Gamma, globalMu, statement[1][1])
             assert type(size) == int
-
-            if statement[1][0] == 'int':
-                d = {'type':['list', 'int']}
-                for i in range(size):
-                    d[i] = Value(0,'int')
-                globalMu[objAddr] = d
-            else :
-
+            if len(statement) == 4:
+                # ['new', ['Sieve', '11'], 'sieves', 'separate']
+                # new list of separate object
+                assert statement[1][0] != 'int'
                 d = {'type':['list', statement[1][0]] }
                 for i in range(size):
+                    #TODO
                     objPointerAddress = max(globalMu.keys()) + 1
                     d[i] = Value(objPointerAddress, 'Address')
                     globalMu[objPointerAddress] = Value(None,'Address')
                     objAddress = max(globalMu.keys()) + 1
                     globalMu[objPointerAddress] = Value(objAddress,'Address')
-                    globalMu[objAddress] = {'type' : [statement[1][0]], 'status': 'nil'}
+                    globalMu[objAddress] = {'type' : ['separate', statement[1][0]], 'status': 'nil'}
 
                 globalMu[objAddr] = d
 
+            elif len(statement) == 3:
+                # ['new', ['Sieve', '11'], 'sieves']
+                if statement[1][0] == 'int':
+                    d = {'type':['list', 'int']}
+                    for i in range(size):
+                        d[i] = Value(0,'int')
+                    globalMu[objAddr] = d
+                else :
+
+                    d = {'type':['list', statement[1][0]] }
+                    for i in range(size):
+                        objPointerAddress = max(globalMu.keys()) + 1
+                        d[i] = Value(objPointerAddress, 'Address')
+                        globalMu[objPointerAddress] = Value(None,'Address')
+                        objAddress = max(globalMu.keys()) + 1
+                        globalMu[objPointerAddress] = Value(objAddress,'Address')
+                        globalMu[objAddress] = {'type' : [statement[1][0]], 'status': 'nil'}
+
+                    globalMu[objAddr] = d
+
         else: 
             # new object
-            
             if (len(statement) == 4):
-                if isinstance(statement[2], list):
-                    objPointerAddr = globalMu[globalMu[Gamma[statement[2][0]]].val][statement[2][1]].val
+                if isinstance(statement[2], list): 
+                    # statement: ['new',  '<ClassName>' [id, index] 'separate']
+                    # new separate Consumer c[1]
+                    index = evalExp(Gamma, globalMu, statement[2][1])
+                    objPointerAddr = globalMu[globalMu[Gamma[statement[2][0]]].val][index].val
                     objAddr = globalMu[objPointerAddr].val
+
+                    if (globalMu[objAddr]['type'][0] != 'separate' or globalMu[objAddr]['status'] != 'nil'):
+                        print('separate-type object can\'t be non-separate-newed.')
+                        return 'error'
+                    elif (globalMu[objAddr]['type'][1] != statement[1]):
+                        print('type mismatch',globalMu[objAddr]['type'][1], statement[1] )
+                        return 'error'
                 else:
                     objPointerAddr = Gamma[statement[2]]
                     objAddr =  globalMu[Gamma[statement[2]]].val
 
-                if (globalMu[objAddr]['type'][0] != 'separate' or globalMu[objAddr]['status'] != 'nil'):
-                    print('separate-type object can\'t be non-separate-newed.')
-                    return 'error'
-                elif (globalMu[objAddr]['type'][1] != statement[1]):
-                    print('type mismatch',globalMu[objAddr]['type'][1], statement[1] )
-                    return 'error'
+                    if (globalMu[objAddr]['type'][0] != 'separate' or globalMu[objAddr]['status'] != 'nil'):
+                        print('separate-type object can\'t be non-separate-newed.')
+                        return 'error'
+                    elif (globalMu[objAddr]['type'][1] != statement[1]):
+                        print('type mismatch',globalMu[objAddr]['type'][1], statement[1] )
+                        return 'error'
 
 
 
                 proc = makeSeparatedProcess(classMap, globalMu,  objPointerAddr)
                 global ProcDict
-                ProcDict[globalMu[Gamma[statement[2]]].val] = proc
+                ProcDict[objAddr] = proc
 
             if (len(statement) == 3):
 
                 if isinstance(statement[2], list):
+                    # new Consumer c[3]
                     isdefined = checkVarIsDefined(Gamma, statement[2][0])
                     if not isdefined:
                         print(statement[2][0], 'is not defined')
@@ -733,9 +762,15 @@ def evalStatement(classMap,
     elif (statement[0] == 'call' or statement[0] == 'uncall'):
         # ['call', 'tc', 'test', [args]]
         # ['call', 'test', [args]]
-
+        # ['call', ['sieves', 'i'], 'setPrime', ['i']]
         if len(statement) == 4:  # call method of object
-            objAddr = globalMu[Gamma[statement[1]]].val
+            if isinstance(statement[1], list):
+                index = evalExp(Gamma, globalMu, statement[1][1])
+                listAddr = globalMu[Gamma[statement[1][0]]].val
+                objPointerAddr = globalMu[listAddr][index].val
+                objAddr = globalMu[objPointerAddr].val
+            else:
+                objAddr = globalMu[Gamma[statement[1]]].val
 
             if (globalMu[objAddr]['status'] == 'nil'):
                 print('Error : nil object can\'t be called.')
@@ -780,7 +815,7 @@ def evalStatement(classMap,
                 # call for remote object
                 callerAddr    = Gamma['this']
                 callOrUncall  = statement[0]
-                targetObjAddr = globalMu[Gamma[statement[1]]].val
+                targetObjAddr = objAddr
                 methodName    = statement[2]
 
                 argsAddr      = []
@@ -810,12 +845,20 @@ def evalStatement(classMap,
             elif (statement[0] == 'uncall' and not invert):
                 localInvert = not invert
 
+            for i in range(len(funcArgs)):
+                if (funcArgs[i]['name'] != passedArgs[i]):
+                    Gamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
+
 
             runBlockStatement(classMap,
                               statements,
                               Gamma,
                               globalMu, localInvert)
 
+
+            for i in range(len(funcArgs)):
+                if (funcArgs[i]['name'] != passedArgs[i]):
+                    Gamma.pop(funcArgs[i]['name'])
 
 
             
@@ -831,7 +874,15 @@ def evalStatement(classMap,
                               globalMu, invert)
 
             e2Evaled = evalExp(Gamma, globalMu, statement[4])
-            assert e2Evaled == True 
+            try:
+                assert e2Evaled == True 
+            except AssertionError:
+                _, _, tb = sys.exc_info()
+                traceback.print_tb(tb) # Fixed format
+                tb_info = traceback.extract_tb(tb)
+                filename, line, func, text = tb_info[-1]
+                print('An error occurred on line {} in statement {}'.format(line, text))
+                exit(1)
         else:       # if-False
             runBlockStatement(classMap,
                               statement[3],
@@ -925,6 +976,7 @@ def evalStatement(classMap,
             assert statement[2] == statement[6]
 
             while True:
+                #print('ref:', globalMu[l].ref)
                 if globalMu[l].ref == 1 and assertValue == globalMu[addr].val:
                     break
 

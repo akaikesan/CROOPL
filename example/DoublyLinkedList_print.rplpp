@@ -102,4 +102,5 @@ class Program
         new DoublyLinkedList list
         call makeList()
         call list::pr() 
+        uncall list::pr() 
         uncall makeList()

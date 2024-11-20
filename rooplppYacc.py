@@ -63,6 +63,7 @@ def p_type(p):
     | INT LBRA RBRA
     | ID LBRA RBRA
     | SEPARATE ID ATTACHED
+    | SEPARATE ID LBRA RBRA
     '''
     if len(p) == 2:
         p[0] = [p[1]]
@@ -73,6 +74,8 @@ def p_type(p):
             p[0] = [p[1], p[2], p[3]]
         else:
             p[0] = ['list', p[1]]
+    elif len(p) == 5:
+        p[0] = ['list', p[2], p[1]]
 
 
 def p_arrayType(p):
@@ -203,6 +206,7 @@ def p_statement(p):
     '''
     statement : y modOp exp
     | NEW arrayType ID
+    | NEW SEPARATE arrayType ID
     | NEW SEPARATE ID y
     | NEW ID y
     | DELETE arrayType ID
@@ -213,10 +217,10 @@ def p_statement(p):
     | PRINT STR
     | y SWAP y
     | COPY type y y
-    | CALL   ID WCOLON ID LPAREN anyIds RPAREN
-    | CALL   ID LPAREN anyIds RPAREN
-    | UNCALL ID WCOLON ID LPAREN anyIds RPAREN
-    | UNCALL ID LPAREN anyIds RPAREN
+    | CALL   y WCOLON ID LPAREN anyIds RPAREN
+    | CALL   y LPAREN anyIds RPAREN
+    | UNCALL y WCOLON ID LPAREN anyIds RPAREN
+    | UNCALL y LPAREN anyIds RPAREN
     | IF exp THEN statements ELSE statements FI exp
     | FROM exp DO statements LOOP statements UNTIL exp
     | LOCAL type y EQ exp  statements DELOCAL type y EQ exp
