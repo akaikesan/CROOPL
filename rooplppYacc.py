@@ -4,6 +4,7 @@ import time
 
 from rooplppLexer import tokens
 from rooplppEval import   makeSeparatedProcess, Value
+from rooplppStoreLoop import makeMuManager
 
 classMap = {}
 
@@ -349,6 +350,8 @@ def yacc_test():
     # generate Process
     # new Program object.
     initProcess = makeSeparatedProcess(classMap, globalMu, 0)
+    muManager = makeMuManager(globalMu, m)
+    
 
     if initProcess == None:
         raise Exception("initProcess is None.")
@@ -371,8 +374,8 @@ def yacc_test():
     print(parent_conn.recv())
 
 
-    # storeProcess.terminate()
     initProcess.terminate()
+    muManager.terminate()
 
 
 
