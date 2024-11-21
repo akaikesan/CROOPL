@@ -189,6 +189,10 @@ def refcountDown(globalMu, addr):
     globalMu[addr] = v
 
 def writeValToMu(Gamma, globalMu, var, val):
+    managerQ = globalMu[-2]
+    parent_conn, child_conn = mp.Pipe()
+    managerQ.put([Gamma, var, val, child_conn])
+    parent_conn.recv()
     if isinstance(var, list):
         listAddress = globalMu[Gamma[var[0]]].val
         writtenList = globalMu[listAddress]
@@ -201,8 +205,6 @@ def writeValToMu(Gamma, globalMu, var, val):
         v =  globalMu[Gamma[var]]
         v.val =  val
         globalMu[Gamma[var]] = v
-        if globalMu[Gamma[var]].val != v.val:
-            print("異常発生!!")
 
 def getType(t):
     if t[0] == 'separate':
@@ -666,8 +668,9 @@ def evalStatement(classMap,
                     if not isdefined:
                         print(statement[2][0], 'is not defined')
                         return 'error'
+                    index = evalExp(Gamma, globalMu,statement[2][1])
 
-                    objPointerAddr = globalMu[globalMu[Gamma[statement[2][0]]].val][int(statement[2][1])].val
+                    objPointerAddr = globalMu[globalMu[Gamma[statement[2][0]]].val][index].val
                     objAddr = globalMu[objPointerAddr].val
                 else:
                     objPointerAddr = Gamma[statement[2]]
