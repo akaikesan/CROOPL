@@ -6,7 +6,6 @@ class Sieve
 
     method sieve(int[] table, int tableSize)
 
-        print table 
         local int i = 0
         from i = 0 do skip
         loop
@@ -32,9 +31,9 @@ class Program
         uncall doSieve()
 
     method doSieve()
-        tSize += 100
-        sLim += 10
-        new int[100] table
+        tSize += 1000
+        sLim +=  32
+        new int[tSize] table
         new separate Sieve[sLim + 1] sieves
         call initSieves(sLim, table)
 
@@ -63,19 +62,6 @@ class Program
         until i > sLim
         delocal int i = sLim + 1
 
-        //local int i = 2
-        //from i = 2 do
-        //    if table[i] = 0 then
-        //        local int j = i
-        //            uncall sieves[i]::setPrime(j)
-        //            delete separate Sieve sieves[i]
-        //        delocal int j = i // wait j.ref == 1
-        //    else skip
-        //    fi table[i] = 0
-        //    i += 1
-        //loop skip
-        //until i > sLim
-        //delocal int i = sLim + 1
 
 
 

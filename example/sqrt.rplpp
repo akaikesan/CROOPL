@@ -26,7 +26,7 @@ class Program
     int num
     int root
     method main()
-        num += 145
+        num += 1000
         local Root r = nil
           new  Root r
           call r::root(num, root)

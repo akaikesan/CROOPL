@@ -876,10 +876,6 @@ def evalStatement(classMap,
                 if (funcArgs[i]['name'] != passedArgs[i]):
                     Gamma.pop(funcArgs[i]['name'])
 
-
-            
-
-
     elif (statement[0] == 'if'):  
         e1Evaled = evalExp(Gamma, globalMu, statement[1])
         assert type(e1Evaled) == bool
@@ -908,12 +904,6 @@ def evalStatement(classMap,
             e2Evaled = evalExp(Gamma, globalMu, statement[4])
             assert e2Evaled == False
 
-
-
-
-
-
-
     elif (statement[0] == 'from'):  # statement[1:4] = [e1, s1, s2, e2]
         #['from', e1, s1, s2, e2]
         assert evalExp(Gamma, globalMu, statement[1]) == True
@@ -938,15 +928,10 @@ def evalStatement(classMap,
                               statement[2],
                               Gamma,
                               globalMu, invert)
-            
-
-
 
     elif (statement[0] == 'local'):
         # local - delocal
         # LOCAL:0 type:1 id:2 EQ exp:3  statements:4 DELOCAL type:5 id:6 EQ exp:7
-
-
         if (statement[1][0] == 'separate'):
 
             if (evalExp(Gamma, globalMu, statement[3]) != 'nil'):
@@ -1035,12 +1020,6 @@ def evalStatement(classMap,
             return 'reQ'
         else:
             runBlockStatement(classMap, statement[2], Gamma, globalMu, invert)
-
-
-
-
-
-
 
     return 'success'
 

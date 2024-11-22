@@ -110,9 +110,14 @@ def storeCycle(q, globalMu):
                         left = globalMu[addr].val
 
                     if isinstance(statement[3], list):
-                        index = evalExp(Gamma,globalMu,statement[3][1])
-                        addr = Gamma[statement[3][0]]
-                        right = globalMu[globalMu[addr].val][index].val
+                        if len(statement[3]) == 3 or len(statement[3]) == 1:
+                            right = evalExp(Gamma,globalMu,statement[3])
+                        elif len(statement[3]) == 2:
+                            index = evalExp(Gamma,globalMu,statement[3][1])
+                            addr = Gamma[statement[3][0]]
+                            right = globalMu[globalMu[addr].val][index].val
+                        else:
+                            raise Exception("Invalid assignment right expression")
                     else:
                         right = evalExp(Gamma, globalMu, statement[3])
                     val = getAssignmentResult(statement[1], invert, left, right)
