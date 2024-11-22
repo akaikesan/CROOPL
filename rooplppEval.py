@@ -20,7 +20,6 @@ class Value:
     def countDown(self):
         self.ref -= 1
 
-
 def checkVarIsDefined(Gamma, var):
     if var in Gamma.keys():
         return True
@@ -189,10 +188,6 @@ def refcountDown(globalMu, addr):
     globalMu[addr] = v
 
 def writeValToMu(Gamma, globalMu, var, val):
-    managerQ = globalMu[-2]
-    parent_conn, child_conn = mp.Pipe()
-    managerQ.put([Gamma, var, val, child_conn])
-    parent_conn.recv()
     if isinstance(var, list):
         listAddress = globalMu[Gamma[var[0]]].val
         writtenList = globalMu[listAddress]
@@ -291,12 +286,10 @@ def makeSeparatedProcess(classMap,
 
 def waitUntilDeletable(Gamma, globalMu, objAddr):
     while True:
-        #print('wait for', objVarName, 'being deletable')
         if globalMu[objAddr]['type'][0] == 'list':
             # list deletable check
             if 'status' in globalMu[objAddr].keys():
                 if globalMu[objAddr]['status'] != 'nil' :
-                    #print('deletable')
                     continue 
                 elif globalMu[objAddr]['status'] == 'nil' :
                     break
@@ -310,9 +303,9 @@ def waitUntilDeletable(Gamma, globalMu, objAddr):
                         if v.val != 0 or v.ref != 1:
                             continue 
                     elif globalMu[objAddr][0]._type == 'Address':
-                        if v.val == 'type':
+                        if k == 'type':
                             continue
-                        if globalMu[v.val]['status'] != 'nil' or v.ref != 1:
+                        if globalMu[globalMu[v.val].val]['status'] != 'nil' or v.ref != 1:
                             continue
                             
                 break
@@ -433,6 +426,12 @@ def evalStatement(classMap,
         # p[0] = ['assignment', p[2], p[1], p[3]]
         # ex) x += 2+1 -> ['assignment', +=, x, 2+1]
 
+        managerQ = globalMu[-2]
+        parent_conn, child_conn = mp.Pipe()
+        managerQ.put([Gamma, statement, invert, child_conn])
+        parent_conn.recv()
+        '''
+
         if (statement[1] == '<=>'):
             if (type(statement[2]) != list and type(statement[3]) != list):
 
@@ -514,6 +513,7 @@ def evalStatement(classMap,
             left = 0
             try:
                 if isinstance(statement[2], list):
+                    # left is list
                     index = evalExp(Gamma,globalMu,statement[2][1])
                     addr = Gamma[statement[2][0]]
                     left = globalMu[globalMu[addr].val][index].val
@@ -523,22 +523,19 @@ def evalStatement(classMap,
             except:
                 print(statement[2], 'is not defined in class', '\'' + getType(globalMu[globalMu[Gamma['this']].val]['type']) + '\'')
 
-            right = 0
-            try:
-                if isinstance(statement[3], list):
-                    index = evalExp(Gamma,globalMu,statement[3][1])
-                    addr = Gamma[statement[3][0]]
-                    right = globalMu[globalMu[addr].val][index].val
-                else:
-                    right = evalExp(Gamma, globalMu, statement[3])
+            if isinstance(statement[3], list):
+                index = evalExp(Gamma,globalMu,statement[3][1])
+                addr = Gamma[statement[3][0]]
+                right = globalMu[globalMu[addr].val][index].val
+            else:
+                right = evalExp(Gamma, globalMu, statement[3])
 
-            except:
-                print(statement[2], 'is not defined in class', '\'' + getType(globalMu[globalMu[Gamma['this']].val]['type']) + '\'')
 
 
             result = getAssignmentResult(statement[1], invert, left, right)
 
             writeValToMu(Gamma, globalMu, statement[2], result)
+            '''
 
     elif (statement[0] == 'print'):
         if invert:
@@ -700,7 +697,7 @@ def evalStatement(classMap,
             if globalMu[listAddr][0]._type == 'int':    
                 globalMu[listAddr] = {"type" : ["list", "int"], "status": "nil"}
             elif globalMu[listAddr][0]._type == 'Address':    
-                for k,v in globalMu[listAddr].values():
+                for k,v in globalMu[listAddr].items():
                     if k != 'type':
                         globalMu[v.val] = {"type" : ["list", statement[1]], "status": "nil"}
             else:
