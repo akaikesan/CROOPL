@@ -7,6 +7,8 @@ class Root
 
         from (bit * bit) > num do skip loop
             uncall doublebit(bit)
+            print bit
+            print "uncall"
             if ((root + bit) * (root + bit)) <= num then
                 root += bit
             else
@@ -18,7 +20,10 @@ class Root
 
     method doublebit(int bit)
       local int z = bit
-      bit += z
+        print z
+        print bit
+        print "hello"
+        bit += z
       delocal int z = bit / 2
 
 class Program
@@ -26,6 +31,11 @@ class Program
     int num
     int root
     method main()
+        call sqrt()
+        uncall sqrt()
+
+    method sqrt()
+
         num += 1000
         local Root r = nil
           new  Root r

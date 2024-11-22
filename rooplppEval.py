@@ -113,6 +113,8 @@ def statementInverter(statement, invert):
             returnStatement[0] = 'uncall'
             return returnStatement
         elif (statement[0] == 'uncall') :
+            print(statement)
+            print(invert)
             # ['call', 'tc', 'test', [args]]
             # ['call', 'test', [args]]
             returnStatement[0] = 'call'
@@ -779,6 +781,7 @@ def evalStatement(classMap,
         # ['call', 'tc', 'test', [args]]
         # ['call', 'test', [args]]
         # ['call', ['sieves', 'i'], 'setPrime', ['i']]
+        print(statement)
         if len(statement) == 4:  # call method of object
             if isinstance(statement[1], list):
                 index = evalExp(Gamma, globalMu, statement[1][1])
@@ -853,10 +856,20 @@ def evalStatement(classMap,
             funcArgs   = classMap[t]['methods'][statement[1]]['args']
             passedArgs = statement[2]
 
-            #local call doesnt change Gamma.
+            #local call use Same Gamma.
 
             localInvert = invert
-            if (statement[0] == 'uncall' and invert):
+            # here, already call/uncall is inverted.
+            if (statement[0] == 'call' and invert):
+                # call is inverted from uncall.
+                # means uncall in uncall
+                localInvert = not invert
+                pass
+            elif (statement[0] == 'call' and not invert):
+                # call
+                pass
+            elif (statement[0] == 'uncall' and invert):
+                # means call in uncall
                 pass
             elif (statement[0] == 'uncall' and not invert):
                 localInvert = not invert

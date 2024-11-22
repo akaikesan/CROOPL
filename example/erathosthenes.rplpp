@@ -1,3 +1,26 @@
+class Root
+    method root(int num, int root)
+      local int bit = 1
+        from bit = 1 do skip loop  
+            call doublebit(bit)
+        until (bit * bit) > num
+
+        from (bit * bit) > num do skip loop
+            uncall doublebit(bit)
+            if ((root + bit) * (root + bit)) <= num then
+                root += bit
+            else
+                skip
+            fi (root / bit) % 2 != 0
+        until bit = 1
+      delocal int bit = 1
+      num -= root * root
+
+    method doublebit(int bit)
+      local int z = bit
+      bit += z
+      delocal int z = bit / 2
+
 class Sieve 
     int prime
 
@@ -6,6 +29,7 @@ class Sieve
 
     method sieve(int[] table, int tableSize)
 
+        print table 
         local int i = 0
         from i = 0 do skip
         loop
@@ -18,9 +42,12 @@ class Sieve
         delocal int i = tableSize
         print table 
 
+
 class Program
     int[] table
     int tSize 
+    int num
+    int root
     int sLim
     int sievelimit
     separate Sieve[] sieves
@@ -31,8 +58,25 @@ class Program
         uncall doSieve()
 
     method doSieve()
-        tSize += 1000
-        sLim +=  32
+        tSize += 100
+        num += 100
+        print num
+
+        local Root r = nil
+          new  Root r
+          print num
+          call r::root(num, root)
+          delete Root r
+        delocal Root r = nil
+        print root
+
+        if root * root < tSize then
+            root += 1 
+        else skip
+        fi root * root < tSize
+
+        sLim += root
+
         new int[tSize] table
         new separate Sieve[sLim + 1] sieves
         call initSieves(sLim, table)
