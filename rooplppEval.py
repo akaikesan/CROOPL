@@ -113,8 +113,6 @@ def statementInverter(statement, invert):
             returnStatement[0] = 'uncall'
             return returnStatement
         elif (statement[0] == 'uncall') :
-            print(statement)
-            print(invert)
             # ['call', 'tc', 'test', [args]]
             # ['call', 'test', [args]]
             returnStatement[0] = 'call'
@@ -781,7 +779,6 @@ def evalStatement(classMap,
         # ['call', 'tc', 'test', [args]]
         # ['call', 'test', [args]]
         # ['call', ['sieves', 'i'], 'setPrime', ['i']]
-        print(statement)
         if len(statement) == 4:  # call method of object
             if isinstance(statement[1], list):
                 index = evalExp(Gamma, globalMu, statement[1][1])

@@ -5,4 +5,4 @@ venv
 parsetab.py
 python311
 __pycache__
-./example
+example

@@ -1,49 +1,89 @@
+class Root
+    method root(int num, int root)
+      local int bit = 1
+        from bit = 1 do skip loop  
+            call doublebit(bit)
+        until (bit * bit) > num
+
+        from (bit * bit) > num do skip loop
+            uncall doublebit(bit)
+            if ((root + bit) * (root + bit)) <= num then
+                root += bit
+            else
+                skip
+            fi (root / bit) % 2 != 0
+        until bit = 1
+      delocal int bit = 1
+      num -= root * root
+
+    method doublebit(int bit)
+      local int z = bit
+      bit += z
+      delocal int z = bit / 2
 
 class Sieve 
     int prime
 
     method setPrime(int p)
-        print prime
         prime += p
-        print prime
 
     method sieve(int[] table, int tableSize)
+
+        print prime
+        print table 
         local int i = 0
         from i = 0 do skip
         loop
             if i % prime = 0 & i != prime then
-                if prime = 5 & i = 85 then
-                    print i % prime
-                else skip
-                fi prime = 5 & i = 85
                 table[i] += 1
             else skip
             fi i % prime = 0 & i != prime
             i += 1
         until i = tableSize
         delocal int i = tableSize
-        print table
+        print table 
+
 
 class Program
     int[] table
     int tSize 
+    int num
+    int root
     int sLim
     int sievelimit
-     Sieve[] sieves
+    separate Sieve[] sieves
 
 
     method  main()
-        tSize += 100
-        sLim += 10
-        new int[100] table
-        new  Sieve[sLim + 1] sieves
+        call doSieve()
+        uncall doSieve()
+
+    method doSieve()
+        tSize += 1000
+        num += tSize
+
+        local Root r = nil
+          new  Root r
+          call r::root(num, root)
+          delete Root r
+        delocal Root r = nil
+
+        if root * root < tSize then
+            root += 1 
+        else skip
+        fi root * root > tSize
+
+        sLim += root
+
+        new int[tSize] table
+        new separate Sieve[sLim + 1] sieves
         call initSieves(sLim, table)
 
         local int i = 2
         from i = 2 do
             if table[i] = 0 then
                 local int j = i
-                    new  Sieve sieves[i]
+                    new separate Sieve sieves[i]
                     call sieves[i]::setPrime(j)
                 delocal int j = i // wait j.ref == 1
             else skip
@@ -64,6 +104,19 @@ class Program
         until i > sLim
         delocal int i = sLim + 1
 
+
+
+
+        //local int i = 2
+        //from i = 2 do
+        //    if table[i] = 0 then
+        //        skip
+        //    else print i
+        //    fi table[i] = 0
+        //    i += 1
+        //loop skip
+        //until i > sLim
+        //delocal int i = sLim
 
 
 
