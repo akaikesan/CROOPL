@@ -430,112 +430,6 @@ def evalStatement(classMap,
         parent_conn, child_conn = mp.Pipe()
         managerQ.put([Gamma, statement, invert, child_conn])
         parent_conn.recv()
-        '''
-
-        if (statement[1] == '<=>'):
-            if (type(statement[2]) != list and type(statement[3]) != list):
-
-                leftAddr = Gamma[statement[2]] #x
-                rightAddr = Gamma[statement[3]] #y
-                leftContent = globalMu[leftAddr]
-                rightContent = globalMu[rightAddr]
-
-                leftContentVal = leftContent.val
-                rightContentVal = rightContent.val
-                leftContent.val = rightContentVal
-                rightContent.val = leftContentVal
-
-                globalMu[leftAddr] = leftContent
-                globalMu[rightAddr] = rightContent
-
-            if (type(statement[2]) == list and type(statement[3]) != list):
-
-
-                listAddr = globalMu[Gamma[statement[2][0]]].val
-                leftList = globalMu[listAddr]
-                listIndex= evalExp(Gamma, globalMu, statement[2][1])
-                leftContentVal = leftList[listIndex].val
-
-                rightAddr = Gamma[statement[3]]
-                rightContentVal = evalExp(Gamma, globalMu, statement[3])
-
-                leftList[listIndex].val = rightContentVal
-                globalMu[listAddr] = leftList
-
-                rightContent = globalMu[rightAddr]
-                rightContent.val = leftContentVal
-                globalMu[rightAddr] = rightContent
-
-            if (type(statement[2]) != list and type(statement[3]) == list):
-
-                listAddr = globalMu[Gamma[statement[3][0]]].val
-                rightList = globalMu[listAddr]
-                listIndex= evalExp(Gamma, globalMu, statement[3][1])
-                rightContentVal = rightList[listIndex].val
-
-                leftAddr = Gamma[statement[2]]
-                leftContentVal = evalExp(Gamma, globalMu, statement[2])
-
-                rightList[listIndex].val = leftContentVal
-                globalMu[listAddr] = rightList
-
-                leftContent = globalMu[leftAddr]
-                leftContent.val = rightContentVal
-                globalMu[leftAddr] = leftContent
-
-            if (type(statement[2]) == list and type(statement[3]) == list):
-
-
-                RlistAddr = globalMu[Gamma[statement[3][0]]].val
-                rightList = globalMu[RlistAddr]
-                RlistIndex= evalExp(Gamma, globalMu, statement[3][1])
-                rightContentVal = rightList[RlistIndex].val
-
-                LlistAddr = globalMu[Gamma[statement[2][0]]].val
-                leftList = globalMu[LlistAddr]
-                LlistIndex= evalExp(Gamma, globalMu, statement[2][1])
-                leftContentVal = leftList[LlistIndex].val
-                
-                if(RlistAddr != LlistAddr):
-                    leftList[LlistIndex].val = rightContentVal
-                    rightList[RlistIndex].val = leftContentVal
-
-                    globalMu[LlistAddr] = leftList
-                    globalMu[RlistAddr] = rightList
-                else:
-                    leftList[LlistIndex].val = rightContentVal
-                    leftList[RlistIndex].val = leftContentVal
-
-                    globalMu[LlistAddr] = leftList
-
-        else:
-            # readMu
-            left = 0
-            try:
-                if isinstance(statement[2], list):
-                    # left is list
-                    index = evalExp(Gamma,globalMu,statement[2][1])
-                    addr = Gamma[statement[2][0]]
-                    left = globalMu[globalMu[addr].val][index].val
-                else:
-                    addr = Gamma[statement[2]]
-                    left = globalMu[addr].val
-            except:
-                print(statement[2], 'is not defined in class', '\'' + getType(globalMu[globalMu[Gamma['this']].val]['type']) + '\'')
-
-            if isinstance(statement[3], list):
-                index = evalExp(Gamma,globalMu,statement[3][1])
-                addr = Gamma[statement[3][0]]
-                right = globalMu[globalMu[addr].val][index].val
-            else:
-                right = evalExp(Gamma, globalMu, statement[3])
-
-
-
-            result = getAssignmentResult(statement[1], invert, left, right)
-
-            writeValToMu(Gamma, globalMu, statement[2], result)
-            '''
 
     elif (statement[0] == 'print'):
         if invert:
@@ -569,10 +463,11 @@ def evalStatement(classMap,
                             if k != len(globalMu[content.val].items()) - 2:
                                 print(', ', end="")
                     print("]")
+
+                if t == 'int':
+                    print(evalExp(Gamma, globalMu, statement[1]))
             except:
                 print(statement[1], 'is not defined')
-            if t == 'int':
-                print(evalExp(Gamma, globalMu, statement[1]))
 
     elif (statement[0] == 'skip'):
         pass
