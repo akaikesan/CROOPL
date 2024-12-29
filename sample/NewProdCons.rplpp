@@ -12,6 +12,7 @@ class Program
         new separate Consumer c1
         new separate Consumer c2
         new separate Buffer b
+        print memory
 
         call b::init()
 
@@ -77,7 +78,6 @@ class Buffer
     method put(int i)
         require length < MAX
           buffer[length]  <=> i
-          print buffer
           print "produce"
           print buffer
           length += 1

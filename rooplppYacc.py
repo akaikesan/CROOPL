@@ -49,27 +49,20 @@ def p_varDeclarations(p):
         p[0] = {}
 
 
-def p_varDeclaration(p):
-    '''
-    varDeclaration : type ID
-    '''
-    p[0] = [{"name": p[2], "type": p[1]}]
-
-
 def p_type(p):
     '''
     type : INT
-    | ID 
+    | ID
     | SEPARATE ID
     | INT LBRA RBRA
     | ID LBRA RBRA
-    | SEPARATE ID ATTACHED
     | SEPARATE ID LBRA RBRA
     '''
     if len(p) == 2:
         p[0] = [p[1]]
     elif len(p) == 3:
         p[0] = [p[1],p[2]]
+
     elif len(p) == 4:
         if p[1] == "separate":
             p[0] = [p[1], p[2], p[3]]
@@ -113,6 +106,11 @@ def p_method(p):
     elif len(p) == 11:
         p[0] = {"methodName": p[2], "args": p[4], "statements": p[8], "require": p[7], "ensure": p[10] }
 
+def p_varDeclaration(p):
+    '''
+    varDeclaration : type ID 
+    '''
+    p[0] = [{"name": p[2], "type": p[1]}]
 
 def p_varDecCommas(p):
     '''
@@ -168,7 +166,7 @@ def p_y(p):
 
 def p_id(p):
     '''
-    id : ID
+    id : ID 
     '''
     p[0] = [p[1]]
 
@@ -177,6 +175,7 @@ def p_arg(p):
     '''
     arg : y
     | exp
+    | THIS 
     '''
     p[0] = p[1]
 
@@ -216,6 +215,7 @@ def p_statement(p):
     | SKIP
     | PRINT exp
     | PRINT STR
+    | PRINT THIS
     | y SWAP y
     | COPY type y y
     | CALL   y WCOLON ID LPAREN anyIds RPAREN

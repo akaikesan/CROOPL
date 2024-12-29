@@ -2,6 +2,7 @@ import ply.lex as lex
 
 tokens = (
     'PRIVATE',
+    'THIS',
     'NUMBER',
     'STR',
     'ID',
@@ -82,12 +83,11 @@ tokens = (
     'LBRACE',
     'RBRACE',
     'SEPARATE',
-    'ATTACHED',
-    'DETACHABLE',
 )
 
 reserved = {
     'class': 'CLASS',
+    'this': 'THIS',
     'private': 'PRIVATE',
     'copy': 'COPY',
     'print': 'PRINT',
@@ -113,8 +113,6 @@ reserved = {
     'delocal': 'DELOCAL',
     'separate': 'SEPARATE',
     'nil': 'NIL',
-    'attached': 'ATTACHED',
-    'detachable': 'DETACHABLE',
 }
 
 

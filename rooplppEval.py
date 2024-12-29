@@ -209,6 +209,7 @@ def getType(t):
 
 def setNewedObj(classMap, objType, Gamma, globalMu, q):
     fields = classMap[getType(objType)]['fields']
+
     for f in fields.keys():
         l = max(globalMu.keys()) + 1
         Gamma[f] = l
@@ -409,7 +410,7 @@ def getAssignmentResult(assignment, invert, left, right):
         elif assignment == '-=':
             return left - right
 
-def evalStatement(classMap, 
+def evalStatement(classMap,
                   rawstatement,
                   Gamma,
                   globalMu,
@@ -432,14 +433,9 @@ def evalStatement(classMap,
         parent_conn.recv()
 
     elif (statement[0] == 'print'):
-        if invert:
-            invertflag = '-1:'
-        else:
-            invertflag = ' '
-        
 
         if statement[1][0] == '"' and statement[1][-1] == '"':
-            print(invertflag, statement[1][1:-1])
+            print(statement[1][1:-1])
         elif (statement[1] == 'memory'):
             printMU(Gamma, globalMu)
         elif isinstance(statement[1], list):
@@ -457,14 +453,14 @@ def evalStatement(classMap,
                     print("[", end="")
                     for k,v in globalMu[content.val].items():
                         if (k != 'type'):
-                            #print(k, ': (', v.val, ',',  v.ref, ',', v._type, end="), ")
-                            #print(k, ':', v.val, end="")
                             print( v.val, end="")
                             if k != len(globalMu[content.val].items()) - 2:
                                 print(', ', end="")
                     print("]")
 
-                if t == 'int':
+                elif t == 'Address':
+                    print(globalMu[content.val])
+                elif t == 'int':
                     print(evalExp(Gamma, globalMu, statement[1]))
             except:
                 print(statement[1], 'is not defined')
@@ -674,7 +670,8 @@ def evalStatement(classMap,
         # ['call', 'tc', 'test', [args]]
         # ['call', 'test', [args]]
         # ['call', ['sieves', 'i'], 'setPrime', ['i']]
-        if len(statement) == 4:  # call method of object
+        if len(statement) == 4:  
+            # call method for local or r1emote object
             if isinstance(statement[1], list):
                 index = evalExp(Gamma, globalMu, statement[1][1])
                 listAddr = globalMu[Gamma[statement[1][0]]].val
@@ -688,7 +685,7 @@ def evalStatement(classMap,
                 return 'error'
 
             if ('gamma' in globalMu[objAddr].keys() ):
-                # call for local object
+                # call method for local object
 
                 t          = getType(globalMu[objAddr]['type'])
                 statements = classMap[t]['methods'][statement[2]]['statements']
@@ -701,6 +698,20 @@ def evalStatement(classMap,
                     return 'error'
 
                 for i in range(len(funcArgs)):
+
+                    varAddr = Gamma[statement[3][i]]
+
+                    # type check
+                    if globalMu[varAddr]._type == 'int':
+                        assert funcArgs[i]['type'][0] == 'int'
+                    else:
+                       argObjAddr = globalMu[varAddr].val
+                       if funcArgs[i]['type'][0] == 'separate': 
+                           assert globalMu[argObjAddr]['type'][0] == 'separate'
+                           assert funcArgs[i]['type'][1] == globalMu[argObjAddr]['type'][1]
+                       else:
+                           assert funcArgs[i]['type'][0] == globalMu[argObjAddr]['type'][0]
+
                     localGamma[funcArgs[i]['name']] = Gamma[passedArgs[i]]
 
                 localInvert = invert
@@ -723,25 +734,56 @@ def evalStatement(classMap,
 
 
             else:
-                # call for remote object
+                # call method for remote object
+
+                t          = getType(globalMu[objAddr]['type'])
+                statements = classMap[t]['methods'][statement[2]]['statements']
+                funcArgs   = classMap[t]['methods'][statement[2]]['args']
+
                 callerAddr    = Gamma['this']
                 callOrUncall  = statement[0]
                 targetObjAddr = objAddr
                 methodName    = statement[2]
 
                 argsAddr      = []
-                for varName in statement[3]:
-                    varAddr = Gamma[varName]
+                attachedFlag  = False
+                assert len(funcArgs) == len(statement[3])
+                for i in range(len(statement[3])):
+
+                    varAddr = Gamma[statement[3][i]]
+
+                    # type check
+                    if globalMu[varAddr]._type == 'int':
+                        assert funcArgs[i]['type'][0] == 'int'
+                    else:
+                       argObjAddr = globalMu[varAddr].val
+                       if funcArgs[i]['type'][0] == 'separate': 
+                           assert globalMu[argObjAddr]['type'][0] == 'separate'
+                           assert funcArgs[i]['type'][1] == globalMu[argObjAddr]['type'][1]
+                       else:
+                           assert funcArgs[i]['type'][0] == globalMu[argObjAddr]['type'][0]
+
+                    if funcArgs[i]['type'][0] != 'separate':
+                        attachedFlag = True
+
                     refcountUp(globalMu, varAddr)
                     argsAddr.append(varAddr)
 
                 q = globalMu[targetObjAddr]['methodQ']
                 time.sleep(sys.float_info.min)
-                q.put([methodName, argsAddr, callOrUncall, callerAddr, None])
+
+                if attachedFlag:
+                    # one of the args is non-separete.
+                    parent_conn, child_conn = mp.Pipe()
+                    q.put([methodName, argsAddr, callOrUncall, callerAddr, child_conn])
+                    msg = parent_conn.recv()
+                else:
+                    # all args are non-separete.
+                    q.put([methodName, argsAddr, callOrUncall, callerAddr, None])
 
 
-        elif len(statement) == 3:  # call method of local object
-            
+        elif len(statement) == 3:  
+            # call method for this object
             objAddr = globalMu[Gamma['this']].val
             t          = getType(globalMu[objAddr]['type'])
             statements = classMap[t]['methods'][statement[1]]['statements']
@@ -750,6 +792,21 @@ def evalStatement(classMap,
 
             #local call use Same Gamma.
 
+            for i in range(len(funcArgs)):
+                varAddr = Gamma[statement[3][i]]
+                # type check
+                if globalMu[varAddr]._type == 'int':
+                    assert funcArgs[i]['type'][0] == 'int'
+                else:
+                   argObjAddr = globalMu[varAddr].val
+                   if funcArgs[i]['type'][0] == 'separate': 
+                       assert globalMu[argObjAddr]['type'][0] == 'separate'
+                       assert funcArgs[i]['type'][1] == globalMu[argObjAddr]['type'][1]
+                   else:
+                       assert funcArgs[i]['type'][0] == globalMu[argObjAddr]['type'][0]
+
+
+            assert len(funcArgs) == len(passedArgs)
             localInvert = invert
             # here, already call/uncall is inverted.
             if (statement[0] == 'call' and invert):
@@ -881,7 +938,6 @@ def evalStatement(classMap,
             assert statement[2] == statement[6]
 
             while True:
-                #print('ref:', globalMu[l].ref)
                 if globalMu[l].ref == 1 and assertValue == globalMu[addr].val:
                     break
 
@@ -949,31 +1005,6 @@ def interpreter(classMap,
 
 
     while(True):
-        '''
-        if className[1] == "Buffer":
-
-            print("histry size:", historyStack.qsize())
-            tmp = []
-            if historyStack.qsize() > 0:
-                for i in range(historyStack.qsize()):
-                    top = historyStack.get()
-                    tmp.append(top)
-                    print(top)
-                for i in range(len(tmp)):
-                    historyStack.put(tmp[len(tmp) - 1 - i])
-
-            if q.qsize() > 0:
-                tmp = []
-                print("methodQ size:", q.qsize())
-                for i in range(q.qsize()):
-                    top = q.get()
-                    tmp.append(top)
-                    print(top)
-                for i in range(len(tmp)):
-                    q.put(tmp[i])
-        '''
-            
-
 
         if q.qsize() != 0:
             request = q.get()
@@ -994,8 +1025,6 @@ def interpreter(classMap,
                     else:
                         assert callORuncall == 'uncall'
                         exp = classMap[getType(procObjtype)]['methods'][methodName]['ensure']
-
-                    #printMU(Gamma,globalMu)
 
                     e1Evaled = evalExp(Gamma, globalMu, exp)
                     if e1Evaled == False:
@@ -1056,7 +1085,6 @@ def interpreter(classMap,
                         request[4].send(methodName + ' method ended')
             elif lenReq == 2:
                 if (historyStack.qsize() == 0 and q.qsize() == 0):
-                    #printMU(Gamma,globalMu)
                     flag = True 
                     for k,v in Gamma.items():
                         if globalMu[v]._type == 'int':
@@ -1075,7 +1103,7 @@ def interpreter(classMap,
                                     if globalMu[listAddr]['status'] == 'nil':
                                         pass
                                 else:
-                                    print('deletable')
+                                    pass
                             elif globalMu[listAddr]['type'][0] == 'separate':
                                 # object deletable check
                                 if globalMu[globalMu[v].val]['status'] != 'nil' or globalMu[v].ref != 1:
@@ -1099,6 +1127,7 @@ def interpreter(classMap,
                         q.put(request)
                 else:
                     q.put(request)
+
 
 
 

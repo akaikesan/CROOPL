@@ -59,7 +59,7 @@ class Program
         uncall doSieve()
 
     method doSieve()
-        tSize += 1000
+        tSize += 100
         num += tSize
 
         local Root r = nil
@@ -77,7 +77,7 @@ class Program
 
         new int[tSize] table
         new separate Sieve[sLim + 1] sieves
-        call initSieves(sLim, table)
+        call initSieves(sLim, table, sLim)
 
         local int i = 2
         from i = 2 do

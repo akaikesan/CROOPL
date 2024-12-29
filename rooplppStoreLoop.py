@@ -120,7 +120,9 @@ def storeCycle(q, globalMu):
                             raise Exception("Invalid assignment right expression")
                     else:
                         right = evalExp(Gamma, globalMu, statement[3])
+
                     val = getAssignmentResult(statement[1], invert, left, right)
+
                     if isinstance(var, list):
                         listAddress = globalMu[Gamma[var[0]]].val
                         writtenList = globalMu[listAddress]
