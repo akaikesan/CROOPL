@@ -1,3 +1,4 @@
+
 class Program
     separate Producer p1
     separate Producer p2
@@ -18,17 +19,21 @@ class Program
         call p1::generate()
         call p2::generate()
 
-        call p1::produce(b)// put produce
-        call p2::produce(b)// put produce
+        local int i = 0
+          call p1::produce(b, i)
+          call p2::produce(b, i)
 
-        call c1::consume(b)// get consume
-        call c2::consume(b)// get consume
+          call c1::consume(b, i)
+          call c2::consume(b, i)
+        delocal int i = 0
 
-        uncall c1::consume(b)// put produce
-        uncall c2::consume(b)// put produce
+        local int i = 0
+          uncall p1::produce(b, i)
+          uncall p2::produce(b, i)
 
-        uncall p1::produce(b) // put consume
-        uncall p2::produce(b) // put consume
+          uncall c1::consume(b, i)
+          uncall c2::consume(b, i)
+        delocal int i = 0
 
         // uncalling produce|consume end
 
@@ -77,7 +82,6 @@ class Buffer
     method put(int i)
         require length < MAX
           buffer[length]  <=> i
-          print buffer
           print "produce"
           print buffer
           length += 1

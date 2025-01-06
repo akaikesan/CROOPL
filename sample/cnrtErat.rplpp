@@ -21,27 +21,30 @@ class Root
       bit += z
       delocal int z = bit / 2
 
+
+
 class Sieve 
     int prime
+    int tSize
 
-    method setPrime(int p)
+    method init(int p, int size)
+        tSize += size 
         prime += p
 
-    method sieve(int[] table, int tableSize)
+    method sieve(separate TableManager tb)
 
-        print prime
-        print table 
         local int i = 0
         from i = 0 do skip
         loop
             if i % prime = 0 & i != prime then
-                table[i] += 1
+                call tb::increment(i, prime)
             else skip
             fi i % prime = 0 & i != prime
             i += 1
-        until i = tableSize
-        delocal int i = tableSize
-        print table 
+        until i = tSize 
+        delocal int i = tSize
+        call tb::addFinished()
+
 
 
 class Program
@@ -52,10 +55,13 @@ class Program
     int sLim
     int sievelimit
     separate Sieve[] sieves
+    separate TableManager tableMan
 
 
     method  main()
         call doSieve()
+        call tableMan::show(tSize)
+        uncall tableMan::show(tSize)
         uncall doSieve()
 
     method doSieve()
@@ -76,15 +82,19 @@ class Program
         sLim += root
 
         new int[tSize] table
+        new separate TableManager tableMan
         new separate Sieve[sLim + 1] sieves
+
         call initSieves(sLim, table)
+        call tableMan::initTable(tSize, sLim)
 
         local int i = 2
         from i = 2 do
             if table[i] = 0 then
                 local int j = i
                     new separate Sieve sieves[i]
-                    call sieves[i]::setPrime(j)
+                    call sieves[i]::init(j, tSize)
+                    call tableMan::addSieve()
                 delocal int j = i // wait j.ref == 1
             else skip
             fi table[i] = 0
@@ -96,7 +106,7 @@ class Program
         local int i = 2
         from i = 2 do
             if table[i] = 0 then
-                 call sieves[i]::sieve(table, tSize)
+                 call sieves[i]::sieve(tableMan)
             else skip
             fi table[i] = 0
             i += 1
@@ -104,19 +114,6 @@ class Program
         until i > sLim
         delocal int i = sLim + 1
 
-
-
-
-        //local int i = 2
-        //from i = 2 do
-        //    if table[i] = 0 then
-        //        skip
-        //    else print i
-        //    fi table[i] = 0
-        //    i += 1
-        //loop skip
-        //until i > sLim
-        //delocal int i = sLim
 
 
 
@@ -144,3 +141,45 @@ class Program
         loop skip
         until l > lim
         delocal int l = lim + 1
+
+
+
+class TableManager
+    int[] table
+    int root 
+    int sieveNum
+    int finishedSieveNum
+    int counter 
+    
+    method increment(int index, int prime)
+        table[index] += 1
+
+    method initTable(int size, int r)
+        root += r
+        new int[size] table
+
+    method show(int size)
+        require finishedSieveNum = sieveNum 
+        local int i = 2
+          from i = 2 do
+              if table[i] = 0 then
+                  counter += 1
+              else skip
+              fi table[i] = 0
+              i += 1
+          loop skip
+          until i = size - 1
+        delocal int i = size - 1 
+        print counter
+        ensure finishedSieveNum = sieveNum 
+
+    method addSieve()
+        sieveNum += 1
+        print sieveNum
+
+    method addFinished()
+        finishedSieveNum += 1
+        print finishedSieveNum
+
+
+

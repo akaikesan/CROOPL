@@ -793,7 +793,7 @@ def evalStatement(classMap,
             #local call use Same Gamma.
 
             for i in range(len(funcArgs)):
-                varAddr = Gamma[statement[3][i]]
+                varAddr = Gamma[statement[2][i]]
                 # type check
                 if globalMu[varAddr]._type == 'int':
                     assert funcArgs[i]['type'][0] == 'int'
