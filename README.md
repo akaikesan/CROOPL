@@ -14,3 +14,18 @@ rooplppYacc.py にCRooplppでファイル名を入力するとそのファイル
 ```
 python rooplppYacc.py <filename.rplpp>
 ```
+
+もしこのエラー
+```
+Too many open files
+```
+が出たら、Linux/macでは、ファイルディスクリプタ上限を設定し直すことでそれを解決できます。
+
+```
+$ ulimit -n 
+256
+$ ulimit -n 500
+$ ulimit -n 
+500
+```
+
