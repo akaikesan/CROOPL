@@ -49,12 +49,16 @@ def deleteObjFromMuGamma(Gamma, globalMu, objAddr, separate):
         deletable = parent_conn.recv()
 
         assert deletable == 'ready_delete'
+
         tobeNilobj = globalMu[objAddr]
         tobeNilobj.pop('methodQ')
         tobeNilobj['status'] = 'nil'
 
         globalMu[objAddr] = tobeNilobj
-        ProcDict[objAddr].terminate()
+        ProcDict[objAddr].kill()
+        time.sleep(sys.float_info.min)
+        ProcDict[objAddr].join()
+        ProcDict[objAddr].close()
         ProcDict.pop(objAddr)
     else:
         waitUntilDeletable(Gamma, globalMu, objAddr)
@@ -1079,10 +1083,11 @@ def interpreter(classMap,
                 
                 if (request[4] != None):
                     # attached
+
                     if (request[0] != 'main'):
                         request[4].send(methodName + ' method ended')
                     elif (request[0] == 'main' and len(ProcDict) == 0):
-                        request[4].send(methodName + ' method ended')
+                        request[4].send(methodName + ' method has finished')
             elif lenReq == 2:
                 if (historyStack.qsize() == 0 and q.qsize() == 0):
                     flag = True 
@@ -1123,10 +1128,16 @@ def interpreter(classMap,
                                 globalMu.pop(v)
 
                         request[1].send('ready_delete')
+                        break
+
                     else:
                         q.put(request)
+                elif (request[0] == 'deleteMain') :
+                    request[1].send('ready_delete')
+                    break
                 else:
                     q.put(request)
+
 
 
 

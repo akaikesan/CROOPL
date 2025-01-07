@@ -3,7 +3,7 @@ import sys
 import time
 
 from rooplppLexer import tokens
-from rooplppEval import   makeSeparatedProcess, Value
+from rooplppEval import   makeSeparatedProcess, Value, printMU
 from rooplppStoreLoop import makeMuManager
 
 classMap = {}
@@ -371,11 +371,31 @@ def yacc_test():
     if inp == "exit":
     '''
 
-    print(parent_conn.recv())
+    parent_conn.recv()
 
+    # break loop of main process
+    parent_conn, child_conn = mp.Pipe()
+    q.put(['deleteMain', child_conn])
+    deletable = parent_conn.recv()
+    assert deletable == 'ready_delete'
 
-    initProcess.terminate()
-    muManager.terminate()
+    # break loop of Store
+    managerQ = globalMu[-2]
+    parent_conn, child_conn = mp.Pipe()
+    managerQ.put(['delete', child_conn])
+    deletable = parent_conn.recv()
+    assert deletable == 'ready_delete'
+
+    initProcess.kill()
+    muManager.kill()
+
+    time.sleep(sys.float_info.min)
+
+    initProcess.join()
+    muManager.join()
+    initProcess.close()
+    muManager.close()
+    m.shutdown()
 
 
 
@@ -383,5 +403,3 @@ if __name__ == '__main__':
     import multiprocessing as mp
     mp.set_start_method('spawn', True)
     yacc_test()
-
-

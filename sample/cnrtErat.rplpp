@@ -65,7 +65,7 @@ class Program
         uncall doSieve()
 
     method doSieve()
-        tSize += 200
+        tSize += 100
         num += tSize
 
         local Root r = nil

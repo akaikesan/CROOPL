@@ -10,7 +10,6 @@ def storeCycle(q, globalMu):
 
 
     while(True):
-        
         if q.qsize() != 0:
             request = q.get()
             if(len(request) == 4):
@@ -140,6 +139,11 @@ def storeCycle(q, globalMu):
 
 
                 child_conn.send('wrote')
+
+            elif(len(request) == 2):
+                request[1].send('ready_delete')
+                break
+    #print('store loop has exited')
 
 
 
