@@ -65,7 +65,7 @@ class Program
         uncall doSieve()
 
     method doSieve()
-        tSize += 100
+        tSize += 200
         num += tSize
 
         local Root r = nil
@@ -163,6 +163,7 @@ class TableManager
           local int i = 2
             from i = 2 do
                 if table[i] = 0 then
+                    print i
                     counter += 1
                 else skip
                 fi table[i] = 0
@@ -170,6 +171,7 @@ class TableManager
             loop skip
             until i = size - 1
           delocal int i = size - 1 
+          print "number of prime"
           print counter
         ensure finishedSieveNum = sieveNum 
 

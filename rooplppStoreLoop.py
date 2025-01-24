@@ -143,7 +143,6 @@ def storeCycle(q, globalMu):
             elif(len(request) == 2):
                 request[1].send('ready_delete')
                 break
-    #print('store loop has exited')
 
 
 

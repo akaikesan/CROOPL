@@ -15,19 +15,19 @@ class Program
 
         call b::init()
 
+        call p1::produce(b)
+        call p2::produce(b)
 
-          call c1::consume(b)
-          call c2::consume(b)
+        call c1::consume(b)
+        call c2::consume(b)
 
-          uncall p1::produce(b)
-          uncall p2::produce(b)
+        
 
-          call p1::produce(b)
-          call p2::produce(b)
+        uncall p1::produce(b)
+        uncall p2::produce(b)
 
-
-          uncall c1::consume(b)
-          uncall c2::consume(b)
+        uncall c1::consume(b)
+        uncall c2::consume(b)
 
         // uncalling produce|consume end
 
@@ -46,9 +46,8 @@ class Producer
 
 
   method produce(separate Buffer buf)
-    data ^= 3
-    call buf::put(data)
-
+      data ^= 3
+      call buf::put(data)
 
 class Consumer
   int data
@@ -83,4 +82,3 @@ class Buffer
           buffer[length]  <=> i
           print buffer
         ensure length < MAX
-

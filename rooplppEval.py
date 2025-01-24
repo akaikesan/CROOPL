@@ -5,9 +5,6 @@ import queue
 import traceback
 
 
-## type is always List. 
-
-
 class Value:
     def __init__(self, v, t):
         self.val = v
@@ -382,7 +379,6 @@ def evalExp(Gamma, globalMu, exp):
                 return evalExp(Gamma, globalMu, exp[0]) < evalExp(Gamma, globalMu, exp[2])
 
     elif exp.isdecimal():
-        # int (exp[0] is string. turn it to int Here.)
         return int(exp)
     elif exp == 'nil':
         return 'nil'
@@ -897,7 +893,6 @@ def evalStatement(classMap,
 
     elif (statement[0] == 'local'):
         # local - delocal
-        # LOCAL:0 type:1 id:2 EQ exp:3  statements:4 DELOCAL type:5 id:6 EQ exp:7
         if (statement[1][0] == 'separate'):
 
             if (evalExp(Gamma, globalMu, statement[3]) != 'nil'):

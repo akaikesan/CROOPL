@@ -100,9 +100,9 @@ def p_method(p):
     method : PRIVATE METHOD ID LPAREN varDecCommas RPAREN statements
     '''
     if len(p) == 7:
-        p[0] = {"private":False, "methodName": p[2], "args": p[4], "statements": p[6] }
+        p[0] = { "methodName": p[2], "args": p[4], "statements": p[6] }
     if len(p) == 8:
-        p[0] = {"private":True, "methodName": p[3], "args": p[5], "statements": p[7] }
+        p[0] = { "methodName": p[3], "args": p[5], "statements": p[7] }
     elif len(p) == 11:
         p[0] = {"methodName": p[2], "args": p[4], "statements": p[8], "require": p[7], "ensure": p[10] }
 
@@ -362,7 +362,6 @@ def yacc_test():
     parent_conn, child_conn = mp.Pipe()
 
     # request process to run main func
-    # initProcessのアドレスは
     q.put(["main", [], "call", -1, child_conn])
 
     

@@ -1,6 +1,6 @@
 
-## 実行環境
-pythonの仮想環境venvを使っています。
+## Environment
+ Using venv is recommended.
 ```
 $ python -m venv .venv 
 $ source .venv/bin/activate
@@ -8,18 +8,21 @@ $ pip install -r requirements.txt
 ```
 
 
-## 実行コマンド
+## Commands
 
-rooplppYacc.py にCRooplppでファイル名を入力するとそのファイルが実行されます。
+You can run program by inputting the file to rooplppYacc.py.
+
 ```
 python rooplppYacc.py <filename.rplpp>
 ```
 
-もしこのエラー
+If you got the error, 
+
 ```
 Too many open files
 ```
-が出たら、Linux/macでは、ファイルディスクリプタ上限を設定し直すことでそれを解決できます。
+
+resolve this error by running the commands below to change the limit of number of file descriptors.
 
 ```
 $ ulimit -n 

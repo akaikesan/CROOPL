@@ -231,10 +231,9 @@ t_NUMBER = r'(0 | [1-9][0-9]*)'
 t_LBRACE = '{'
 t_RBRACE = '}'
 t_STR= r'\".*\"'
-# A string containing ignored characters (spaces and tabs)
+
 t_ignore_COMMENT = r'//.*'
 t_ignore = ' \t'
-# A regular expression rule with some action code
 
 
 
