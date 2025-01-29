@@ -2,9 +2,9 @@ import ply.yacc as yacc
 import sys
 import time
 
-from rooplppLexer import tokens
-from rooplppEval import   makeSeparatedProcess, Value, printMU
-from rooplppStoreLoop import makeMuManager
+from crooplLexer import tokens
+from crooplEval import   makeSeparatedProcess, Value
+from crooplStoreLoop import makeMuManager
 
 classMap = {}
 
